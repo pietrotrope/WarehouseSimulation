@@ -6,11 +6,12 @@ from simulation.graph.graph import Graph
 
 class Environment:
 
-    def __init__(self):
+    def __init__(self, map_path=None):
         self.raster_map = None
         self.map_shape = None
         self.graph = None
-        self.__load_map()
+        self.graph_to_raster = {}
+        self.__load_map(map_path)
         self.__gen_graph()
 
         if self.graph is None or self.raster_map is None:
@@ -30,8 +31,9 @@ class Environment:
         picking_stations_columns = [x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
-    def __load_map(self):
-        self.raster_map = np.array(pd.read_csv('map.csv', header=None))
+    def __load_map(self, map_path):
+        map_path = 'map.csv' if map_path is None else map_path
+        self.raster_map = np.array(pd.read_csv(map_path, header=None))
         self.map_shape = self.raster_map.shape
 
     def __gen_graph(self):
@@ -47,32 +49,45 @@ class Environment:
         for true_i in range(self.map_shape[0]):
             for true_j in range(self.map_shape[1]):
                 if self.raster_map[true_i][true_j] == 4:
+                    # Found a picking station
                     if self.raster_map[true_i - 1][true_j] == self.raster_map[true_i][true_j - 1] == 0:
+                        # If this is the first block of the picking station
+                        self.graph_to_raster[self.raster_to_key((i, j))] = [(true_i, true_j)]
                         picking_station = (true_i, true_j)
+                        picking_station_g = (i, j)
                         node = self.graph.get_node(self.raster_to_key(picking_station))
                         node.change_type(Tile(self.raster_map[true_i][true_j]))
                         self.__add_edge((true_i, true_j), (true_i, true_j - 1))
-                        j += 1
-                    if self.raster_map[true_i - 1][true_j] == 4:
+                    elif self.raster_map[true_i - 1][true_j] == 4:
+                        picking_station_blocks = self.graph_to_raster[self.raster_to_key(picking_station_g)]
+                        picking_station_blocks.append((true_i, true_j))
+                        self.graph_to_raster[self.raster_to_key(picking_station_g)] = picking_station_blocks
                         if self.raster_map[true_i][true_j - 1] == 0:
                             self.__add_edge(picking_station, (true_i, j - 1))
                         if self.raster_map[true_i][true_j + 1] == 0:
                             self.__add_edge(picking_station, (true_i, j + 1))
                         self.__add_edge(picking_station, (true_i + 1, j))
                     elif self.raster_map[true_i][true_j - 1] == 4:
+                        picking_station_blocks = self.graph_to_raster[self.raster_to_key(picking_station_g)]
+                        picking_station_blocks.append((true_i, true_j))
+                        self.graph_to_raster[self.raster_to_key(picking_station_g)] = picking_station_blocks
                         self.__add_edge(picking_station, (picking_station[0] - 1, j))
                         if self.raster_map[true_i][true_j + 1] == 0:
                             self.__add_edge(picking_station, (picking_station[0], j))
-                    continue
-
-                node = self.graph.get_node(self.raster_to_key((i, j)))
-                node.change_type(Tile(self.raster_map[i][j]))
-                if self.raster_map[i][j] == 0 or self.raster_map[i][j] == 1:
-                    self.__add_edge((i, j), (i, j + 1))
-                    self.__add_edge((i, j), (i + 1, j))
-                    if j != 0:
-                        self.__add_edge((i, j), (i, j - 1))
-                    if i != 0:
-                        self.__add_edge((i, j), (i - 1, j))
-            j += 1
-        i += 1
+                    if self.raster_map[true_i][true_j + 1] == 0 and self.raster_map[true_i - 1][true_j] == 4:
+                        j += 1
+                else:
+                    self.graph_to_raster[self.raster_to_key((i, j))] = [(true_i, true_j)]
+                    node = self.graph.get_node(self.raster_to_key((i, j)))
+                    node.change_type(Tile(self.raster_map[i][j]))
+                    if self.raster_map[i][j] == 0 or self.raster_map[i][j] == 1:
+                        self.__add_edge((i, j), (i, j + 1))
+                        self.__add_edge((i, j), (i + 1, j))
+                        if j != 0:
+                            self.__add_edge((i, j), (i, j - 1))
+                        if i != 0:
+                            self.__add_edge((i, j), (i - 1, j))
+                if self.raster_map[true_i][true_j] != 4:
+                    j = (j + 1) % self.map_shape[1]
+            if self.raster_map[true_i][true_j] != 4:
+                i += 1
