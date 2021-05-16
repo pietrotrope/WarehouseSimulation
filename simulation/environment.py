@@ -52,34 +52,43 @@ class Environment:
                     # Found a picking station
                     if self.raster_map[true_i - 1][true_j] == self.raster_map[true_i][true_j - 1] == 0:
                         # If this is the first block of the picking station
-                        self.graph_to_raster[self.raster_to_key((i, j))] = [(true_i, true_j)]
                         picking_station = (true_i, true_j)
                         picking_station_g = (i, j)
                         node = self.graph.get_node(self.raster_to_key(picking_station))
                         node.change_type(Tile(self.raster_map[true_i][true_j]))
                         self.__add_edge((true_i, true_j), (true_i, true_j - 1))
-                    elif self.raster_map[true_i - 1][true_j] == 4:
-                        picking_station_blocks = self.graph_to_raster[self.raster_to_key(picking_station_g)]
-                        picking_station_blocks.append((true_i, true_j))
-                        self.graph_to_raster[self.raster_to_key(picking_station_g)] = picking_station_blocks
-                        if self.raster_map[true_i][true_j - 1] == 0:
-                            self.__add_edge(picking_station, (true_i, j - 1))
-                        if self.raster_map[true_i][true_j + 1] == 0:
-                            self.__add_edge(picking_station, (true_i, j + 1))
-                        self.__add_edge(picking_station, (true_i + 1, j))
-                    elif self.raster_map[true_i][true_j - 1] == 4:
-                        picking_station_blocks = self.graph_to_raster[self.raster_to_key(picking_station_g)]
-                        picking_station_blocks.append((true_i, true_j))
-                        self.graph_to_raster[self.raster_to_key(picking_station_g)] = picking_station_blocks
-                        self.__add_edge(picking_station, (picking_station[0] - 1, j))
-                        if self.raster_map[true_i][true_j + 1] == 0:
-                            self.__add_edge(picking_station, (picking_station[0], j))
-                    if self.raster_map[true_i][true_j + 1] == 0 and self.raster_map[true_i - 1][true_j] == 4:
+
+                        picking_station_blocks = [picking_station]
+
+                        tmp_i = true_i
+                        tmp_j = true_j + 1
+
+                        self.raster_map[true_i][true_j] = -1
+
+                        while self.raster_map[tmp_i][tmp_j] == 4:
+                            while self.raster_map[tmp_i][tmp_j] == 4:
+                                self.__add_edge(picking_station, (picking_station[0] - 1, j))
+                                if self.raster_map[tmp_i][tmp_j + 1] == 0:
+                                    self.__add_edge(picking_station, (picking_station[0], j))
+
+                                if self.raster_map[tmp_i - 1][tmp_j] == -1:
+                                    self.__add_edge(picking_station, (picking_station[0] + 1, j))
+                                    if self.raster_map[tmp_i][tmp_j + 1] == 0:
+                                        self.__add_edge(picking_station, (picking_station[0], j))
+                                self.raster_map[tmp_i][tmp_j] = -1
+                                picking_station_blocks.append((tmp_i, tmp_j))
+                                tmp_j += 1
+                            tmp_i += 1
+                            tmp_j = true_j
+
+                        self.graph_to_raster[self.raster_to_key((i, j))] = picking_station_blocks
+                elif self.raster_map[true_i][true_j] == -1:
+                    if self.raster_map[true_i][true_j + 1] == 0:
                         j = (j + 1) % self.map_shape[1]
                 else:
                     self.graph_to_raster[self.raster_to_key((i, j))] = [(true_i, true_j)]
                     node = self.graph.get_node(self.raster_to_key((i, j)))
-                    node.change_type(Tile(self.raster_map[i][j]))
+                    node.change_type(Tile(self.raster_map[true_i][true_j]))
                     if self.raster_map[i][j] == 0 or self.raster_map[i][j] == 1:
                         self.__add_edge((i, j), (i, j + 1))
                         self.__add_edge((i, j), (i + 1, j))
@@ -87,6 +96,7 @@ class Environment:
                             self.__add_edge((i, j), (i, j - 1))
                         if i != 0:
                             self.__add_edge((i, j), (i - 1, j))
-                if self.raster_map[true_i][true_j] != 4:
+                if self.raster_map[true_i][true_j] != 4 and self.raster_map[true_i][true_j] != -1:
                     j = (j + 1) % self.map_shape[1]
             i += 1
+        self.raster_map[self.raster_map == -1] = 4
