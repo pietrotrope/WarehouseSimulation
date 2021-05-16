@@ -20,9 +20,8 @@ class Graph:
             self.nodes[src].adj.append(self.nodes[dest])
 
         if not self.is_edge_defined(dest, src):
-            if src != dest:
-                self.adj[dest, src] = True
-                self.nodes[dest].adj.append(self.nodes[src])
+            self.adj[dest, src] = True
+            self.nodes[dest].adj.append(self.nodes[src])
 
     def get_node(self, key):
         return self.nodes[key]
