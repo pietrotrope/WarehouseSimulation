@@ -75,7 +75,7 @@ class Environment:
                         if self.raster_map[true_i][true_j + 1] == 0:
                             self.__add_edge(picking_station, (picking_station[0], j))
                     if self.raster_map[true_i][true_j + 1] == 0 and self.raster_map[true_i - 1][true_j] == 4:
-                        j += 1
+                        j = (j + 1) % self.map_shape[1]
                 else:
                     self.graph_to_raster[self.raster_to_key((i, j))] = [(true_i, true_j)]
                     node = self.graph.get_node(self.raster_to_key((i, j)))
@@ -89,5 +89,4 @@ class Environment:
                             self.__add_edge((i, j), (i - 1, j))
                 if self.raster_map[true_i][true_j] != 4:
                     j = (j + 1) % self.map_shape[1]
-            if self.raster_map[true_i][true_j] != 4:
-                i += 1
+            i += 1
