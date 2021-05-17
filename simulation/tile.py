@@ -4,6 +4,15 @@ from enum import Enum
 class Tile(Enum):
     WALKABLE = 0
     ROBOT = 1
-    SHELF = 2
-    POD = 3
+    POD = 2
+    PODTAKEN = 3
     PICKING_STATION = 4
+
+
+tileColor = {
+    0: [255, 255, 255],
+    1: [0, 0, 0],
+    2: [0, 0, 255],
+    3: [255, 0, 0],
+    4: [0, 255, 0]
+}
