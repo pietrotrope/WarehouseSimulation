@@ -63,14 +63,13 @@ class Environment:
                     node.coord = (i, j)
                     node.type = Tile(self.raster_map[i][j])
                     self.raster_to_graph[(i, j)] = count
-
-        for i in range(self.map_shape[0]):
-            for j in range(self.map_shape[1]):
                 node = self.raster_to_graph[(i, j)]
                 if j != 0:
                     self.graph.add_edge(node, self.raster_to_graph[(i, j - 1)])
                 if i != 0:
                     self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
+
+
 
         '''
         i = j = 0
