@@ -25,3 +25,4 @@ class Graph:
 
     def get_node(self, key):
         return self.nodes[key]
+
