@@ -11,9 +11,6 @@ class Screen:
         self.done = False
         self.matrix = matrix
         self.tileSize = tileSize
-        print(len(matrix))
-        print(len(matrix[0]))
-
         clock = pygame.time.Clock()
 
     def drawSquare(self, x, y, col):
@@ -28,3 +25,7 @@ class Screen:
         for x in range(len(self.matrix)):
             for y in range(len(self.matrix[0])):
                 self.drawSquare(x, y, tileColor[self.matrix[x][y]])
+
+    def showFrame(self):
+            self.draw()
+            pygame.display.flip()
