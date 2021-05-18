@@ -42,6 +42,7 @@ class Environment:
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[], [], []]
+        upper_station = [[], [], []]
         count = -1
 
         for i in range(self.map_shape[0]):
@@ -51,13 +52,15 @@ class Environment:
                     if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
                         picking_station_number = picking_station_number + 1
                         count += 1
+                        upper_station[picking_station_number] = (i, j)
                         node = self.graph.get_node(count)
                         node.coord = [(i, j)]
                         node.type = Tile(self.raster_map[i][j])
                         picking_stations[picking_station_number].append((i, j))
+                        self.raster_to_graph[(i, j)] = count
                     elif self.raster_map[i][j - 1] == 0:
                         picking_station_number += 1
-                    self.raster_to_graph[(i, j)] = count
+                    self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[picking_station_number]]
                     picking_stations[picking_station_number].append((i, j))
                 else:
                     count += 1
@@ -65,6 +68,7 @@ class Environment:
                     node.coord = [(i, j)]
                     node.type = Tile(self.raster_map[i][j])
                     self.raster_to_graph[(i, j)] = count
+
                 node = self.raster_to_graph[(i, j)]
                 if j != 0:
                     self.graph.add_edge(node, self.raster_to_graph[(i, j - 1)])
