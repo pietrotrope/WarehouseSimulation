@@ -3,10 +3,21 @@ from simulation.graph import node
 from simulation.tile import Tile
 import math
 
+def average_point(listOfPoints):
+    x = 0
+    y = 0
+    for point in listOfPoints:
+        x += point[0]
+        y += point[1]
+    x = x/len(listOfPoints)
+    y = y/len(listOfPoints)
+    return (x, y)
 
 def distance(env, start_node, goal):
-    x1, y1 = env.key_to_raster(start_node.id)[0]
-    x2, y2 = env.key_to_raster(goal.id)[0]
+    p1 = env.key_to_raster(start_node.id)
+    p2 = env.key_to_raster(goal.id)
+    x1, y1 = average_point(p1)
+    x2, y2 = average_point(p2)
     return math.sqrt(abs(x1-x2)) + math.sqrt(abs(y1-y2))
 
 
@@ -20,57 +31,41 @@ def reconstruct_path(came_from, current_node):
 
 def astar(env, start_node, goal):
     g_score = {}
-    h_score = {}
     f_score = {}
 
-    closedset = []
+    came_from = {}
+    
     openset = [start_node.id]
     g_score[start_node.id] = 0
-    came_from = {}
-    h_score[start_node.id] = distance(env, start_node, goal)
-    f_score[start_node.id] = h_score[start_node.id]
+    f_score[start_node.id] = distance(env, start_node, goal)
 
     while openset != []:
         x = openset[0]
         for node_id in openset:
             if f_score[node_id] < f_score[x]:
                 x = node_id
-        if x == goal.id:
+        
+
+        if goal in env.graph.get_node(x).adj:
+            came_from[goal.id] = x
             return reconstruct_path(came_from, goal.id)
+
         openset.remove(x)
-        closedset.append(x)
+
         for y in env.graph.get_node(x).adj:
-            if y.id in closedset:
-                continue
-            came_from[y.id] = x
-            g_score[y.id] = g_score[x] + 1
-            h_score[y.id] = distance(env, env.graph.get_node(x), y)
-            f_score[y.id] = g_score[y.id] + h_score[y.id]
+            if y.type == Tile.WALKABLE:
+                if y.id not in g_score:
+                    g_score[y.id]=math.inf
 
-            for open_node in openset:
-                if y.id == open_node and g_score[y.id] > g_score[open_node]:
-                    continue
+                tentative_g_score = g_score[x] + 1
+                if tentative_g_score < g_score[y.id]:
+                    came_from[y.id] = x
+                    g_score[y.id] = tentative_g_score
+                    f_score[y.id] = g_score[y.id] + distance(env, y, goal)
+                    if y.id not in openset:
+                        openset.append(y.id)           
 
-            openset.append(y.id)
     return []
-
-
-env = Environment()
-
-
-start = None
-end = None
-
-for node in env.graph.nodes:
-    if start == None and node.type == Tile.PICKING_STATION:
-        start = node
-    if end == None and node.type == Tile.POD:
-        end = node
-
-ids = astar(env, start, end)
-
-for SingleId in ids:
-    print(env.graph_to_raster[SingleId])
 
 
 """

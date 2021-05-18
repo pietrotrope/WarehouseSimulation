@@ -2,7 +2,7 @@ from simulation.environment import Environment
 from simulation.graph import node
 from simulation.tile import Tile
 import math
-from astar import astar
+from astar.astar import astar
 
 env = Environment()
 
@@ -18,5 +18,6 @@ for node in env.graph.nodes:
 
 ids = astar(env, start, end)
 
+print(ids)
 for SingleId in ids:
     print(SingleId)
