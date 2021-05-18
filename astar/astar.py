@@ -5,10 +5,8 @@ import math
 
 
 def distance(env, start_node, goal):
-    x1, y1 = env.graph_to_raster[start_node.id][0]
-    print(goal.id)
-    print(env.graph_to_raster[goal.id])
-    x2, y2 = env.graph_to_raster[goal.id][0]
+    x1, y1 = env.key_to_raster(start_node.id)[0]
+    x2, y2 = env.key_to_raster(goal.id)[0]
     return math.sqrt(abs(x1-x2)) + math.sqrt(abs(y1-y2))
 
 
@@ -76,7 +74,6 @@ for SingleId in ids:
 
 
 """
-
 astarRoutes = {}
 for node in env.graph.nodes:
     if node.tile == Tile.POD:
@@ -96,5 +93,4 @@ for node in env.graph.nodes:
                     astarRoutes[node.id][node2.id] = res
                 else:
                     astarRoutes[node.id] = {node2.id:res}
-
 """
