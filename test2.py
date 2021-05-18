@@ -6,6 +6,7 @@ import math
 from astar.astar import astar, computeAstarRoutes
 from rendering.screen import Screen, CommunicationSocket
 import time
+import json
 
 env = Environment()
 
@@ -32,9 +33,10 @@ scr.commSocket.matrix = envMap
 scr.run()
 """
 start = time.time()
-computeAstarRoutes(env)
+dic = computeAstarRoutes(env)
+with open("astarRoutes.json", "w") as fp:
+    json.dump(dic, fp)
 print(time.time()-start)
-
 print("seconds to compute all the routes")
 
 
