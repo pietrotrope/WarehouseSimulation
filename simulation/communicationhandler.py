@@ -29,5 +29,4 @@ class CommunicationHandler(socketserver.BaseRequestHandler):
                 return
 
     def finish(self) -> None:
-        print('Client {} connected'.format(self.client_address))
         self.request.send(b'bye')
