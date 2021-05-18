@@ -30,6 +30,22 @@ class GA:
         self.initialPopulation = self.__generatepopulation(seed)
         self.fitness = fitness
 
+    # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
+    def chromosome_to_schedule(self, chromosome):
+        divisionpoints = list(range(self.n + 1, self.n + self.m, 1))
+        last = 0
+        k = 0
+        schedule = [0] * self.m
+        for i in range(len(chromosome)):
+            if chromosome[i] in divisionpoints:
+                schedule[k] = chromosome[last:i]
+                k += 1
+                last = i+1
+            if k == self.m-1:
+                break
+        schedule[k] = chromosome[last:]
+        return schedule
+
     def __generatepopulation(self, seed):
         np.random.seed(seed)
         return np.asarray([np.random.permutation(self.baseIndividual).tolist() for i in range(self.popsize)])
