@@ -52,7 +52,7 @@ class Environment:
                         picking_station_number = picking_station_number + 1
                         count += 1
                         node = self.graph.get_node(count)
-                        node.coord = (i, j)
+                        node.coord = [(i, j)]
                         node.type = Tile(self.raster_map[i][j])
                         picking_stations[picking_station_number].append((i, j))
                     elif self.raster_map[i][j - 1] == 0:
@@ -62,7 +62,7 @@ class Environment:
                 else:
                     count += 1
                     node = self.graph.get_node(count)
-                    node.coord = (i, j)
+                    node.coord = [(i, j)]
                     node.type = Tile(self.raster_map[i][j])
                     self.raster_to_graph[(i, j)] = count
                 node = self.raster_to_graph[(i, j)]
