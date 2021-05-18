@@ -15,9 +15,6 @@ class CommunicationServer(socketserver.BaseServer):
 
 class CommunicationHandler(socketserver.BaseRequestHandler):
 
-    def setup(self) -> None:
-        print('Client {} connected'.format(self.client_address))
-
     def handle(self) -> None:
         while True:
             data = self.request.recv(1024)
