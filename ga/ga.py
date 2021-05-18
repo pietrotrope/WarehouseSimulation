@@ -31,7 +31,7 @@ class GA:
         self.initialPopulation = self.__generatepopulation(seed)
         self.simulation = simulation
 
-    def __fitness(self,chromosome):
+    def __fitness(self, chromosome):
         assignments = self.chromosome_to_schedule(chromosome)
 
         # results should be an array in the form [TT, TTC, BU]
@@ -135,7 +135,8 @@ class GA:
     def run(self):
         # eval the initial population
         # Fx = self.fitness(self.initialPopulation)
-        Fx = []
+        Fx = map(self.__fitness, self.initialPopulation)
+
         lastcol = self.n + self.m - 1
         df = pd.DataFrame(self.initialPopulation)
         df[lastcol] = Fx
