@@ -17,7 +17,8 @@ class GA:
     # pmutation: mutation rate
     # pselection: selection rate
 
-    def __init__(self, seed, fitness, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2, n=50,
+    def __init__(self, seed, simulation, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2,
+                 n=50,
                  m=8):
         self.popsize = popsize
         self.maxepoc = maxepoc
@@ -28,7 +29,19 @@ class GA:
         self.m = m
         self.baseIndividual = np.arange(1, n + m)
         self.initialPopulation = self.__generatepopulation(seed)
-        self.fitness = fitness
+        self.simulation = simulation
+
+    def __fitness(self,chromosome):
+        assignments = self.chromosome_to_schedule(chromosome)
+
+        # results should be an array in the form [TT, TTC, BU]
+        results = self.simulation()
+
+        maxtest = max([len(assignments[i]) for i in range(self.m)])
+        totaltest = self.n
+        Fx = maxtest / results[0] + totaltest / results[1] + results[2]
+
+        return [Fx, results[0], results[1], results[2]]
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
     def chromosome_to_schedule(self, chromosome):
@@ -40,8 +53,8 @@ class GA:
             if chromosome[i] in divisionpoints:
                 schedule[k] = chromosome[last:i]
                 k += 1
-                last = i+1
-            if k == self.m-1:
+                last = i + 1
+            if k == self.m - 1:
                 break
         schedule[k] = chromosome[last:]
         return schedule
