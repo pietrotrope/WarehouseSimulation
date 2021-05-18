@@ -1,23 +1,41 @@
+from rendering import screen
 from simulation.environment import Environment
 from simulation.graph import node
 from simulation.tile import Tile
 import math
-from astar.astar import astar
+from astar.astar import astar, computeAstarRoutes
+from rendering.screen import Screen, CommunicationSocket
+import time
 
 env = Environment()
 
-
+"""
 start = None
 end = None
 
 for node in env.graph.nodes:
-    if start == None and node.type == Tile.PICKING_STATION:
+    if node.type == Tile.PICKING_STATION:
         start = node
     if end == None and node.type == Tile.POD:
         end = node
 
 ids = astar(env, start, end)
 
-print(ids)
+
+scr = Screen(15)
+envMap = env.raster_map
 for SingleId in ids:
-    print(SingleId)
+    x, y = env.key_to_raster(SingleId)[0]
+    envMap[x][y]=3
+
+scr.commSocket.matrix = envMap
+scr.run()
+"""
+start = time.time()
+computeAstarRoutes(env)
+print(time.time()-start)
+
+print("seconds to compute all the routes")
+
+
+    

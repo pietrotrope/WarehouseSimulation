@@ -1,7 +1,6 @@
-from simulation.environment import Environment
-from simulation.graph import node
 from simulation.tile import Tile
 import math
+import multiprocessing as mp
 
 def average_point(listOfPoints):
     x = 0
@@ -48,7 +47,7 @@ def astar(env, start_node, goal):
 
         if goal in env.graph.get_node(x).adj:
             came_from[goal.id] = x
-            return reconstruct_path(came_from, goal.id)
+            return reconstruct_path(came_from, goal.id)[:-1]
 
         openset.remove(x)
 
@@ -68,24 +67,36 @@ def astar(env, start_node, goal):
     return []
 
 
-"""
-astarRoutes = {}
-for node in env.graph.nodes:
-    if node.tile == Tile.POD:
-        for node2 in env.graph.nodes:
-            if node2.tile == Tile.PICKING_STATION:
-                res = astar(node, node2)
-                if node.id in astarRoutes:
-                    if len(res) < len(astarRoutes[node.id]):
-                        astarRoutes[node.id] = res
-                else:
-                    astarRoutes[node.id] = res
-    if node.tile == Tile.WALKABLE:
-        for node2 in env.graph.nodes:
-            if node2.tile == Tile.POD:
-                res = astar(node, node2)
-                if node.id in astarRoutes:
-                    astarRoutes[node.id][node2.id] = res
-                else:
-                    astarRoutes[node.id] = {node2.id:res}
-"""
+def _singleAstarPP(dic, env, node, node2):
+    res = astar(env, node, node2)
+    if node.id in dic:
+        if len(res) < len(dic[node.id]):
+            dic[node.id] = res
+        else:   
+            dic[node.id] = res
+
+def _singleAstarWP(dic, env, node, node2):
+    res = astar(env, node, node2)
+    if node.id in dic:
+        dic[node.id][node2.id] = res
+    else:
+        dic[node.id] = {node2.id:res}
+
+def computeAstarRoutes(env):
+    manager = mp.Manager()
+    pool = mp.Pool(processes=8)
+    astarRoutes = manager.dict()
+    for node in env.graph.nodes:
+        if node.type == Tile.POD:
+            for node2 in env.graph.nodes:
+                if node2.type == Tile.PICKING_STATION:
+                    pool.apply_async(_singleAstarPP,
+                    (astarRoutes, env, node, node2))
+        if node.type == Tile.WALKABLE or node.type == Tile.ROBOT:
+            for node2 in env.graph.nodes:
+                if node2.type == Tile.POD:
+                    pool.apply_async(_singleAstarWP,
+                    (astarRoutes, env, node, node2))
+    pool.close()
+    pool.join()
+    return dict(astarRoutes)
