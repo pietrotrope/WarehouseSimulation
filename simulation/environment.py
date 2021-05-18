@@ -1,7 +1,11 @@
+import socketserver
+
 import pandas as pd
 import numpy as np
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
+from simulation.communicationhandler import CommunicationHandler
+import threading
 
 
 class Environment:
@@ -17,6 +21,12 @@ class Environment:
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
+
+        server = socketserver.ThreadingTCPServer(('localhost', 50666), CommunicationHandler)
+        server.raster_map = self.raster_map
+        srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
+        srv.start()
+        print('Server listening at localhost:50666')
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord

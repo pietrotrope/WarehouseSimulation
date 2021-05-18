@@ -1,16 +1,20 @@
-from simulation.environment import Environment
 import pygame
 from simulation.tile import Tile, tileColor
+import socket
+import json
+import numpy as np
 import random
+
+HOST, PORT = 'localhost', 50666
 
 class Screen:
 
-    def __init__(self, tileSize, screenWidth = 800, screenHeight = 600):
+    def __init__(self, tileSize, screenWidth=800, screenHeight=600):
         pygame.init()
         self.screen = pygame.display.set_mode((screenWidth, screenHeight))
         self.done = False
         self.tileSize = tileSize
-        self.commSocket = CommunicationSocket()
+        self.map = None
         clock = pygame.time.Clock()
 
     def drawSquare(self, x, y, col):
@@ -22,15 +26,24 @@ class Screen:
                                      self.tileSize - 1))
 
     def draw(self):
-        matrix = self.commSocket.get_matrix()
-        for x in range(len(matrix)):
-            for y in range(len(matrix[0])):
-                self.drawSquare(x, y, tileColor[matrix[x][y]])
+        self.get_map()
+        for x in range(len(self.map)):
+            for y in range(len(self.map[0])):
+                self.drawSquare(x, y, tileColor[self.map[x][y]])
 
     def showFrame(self):
-            self.draw()
-            pygame.display.flip()
-    
+        self.draw()
+        pygame.display.flip()
+
+    def get_map(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((HOST, PORT))
+            sock.sendall(b'map')
+            resp = sock.recv(8192)
+            resp = resp.decode()
+            raster_map = np.array(json.loads(resp))
+        self.map = raster_map
+
     def run(self):
         while not self.done:
             self.showFrame()
@@ -38,12 +51,3 @@ class Screen:
                 if event.type == pygame.QUIT:
                     self.done = True
         pygame.quit()
-
-
-class CommunicationSocket:
-    def __init__(self) -> None:
-        pass
-    
-    def get_matrix(self):
-        return [[0, 0, 1], [0, 1, 2]]
-    
