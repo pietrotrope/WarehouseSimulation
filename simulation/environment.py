@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
-from simulation.communicationhandler import CommunicationHandler
+from simulation.enviroment_server import CommunicationHandler
 import threading
 
 
