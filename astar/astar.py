@@ -23,19 +23,17 @@ def distance(env, start_node, goal):
 
 
 def reconstruct_path(came_from, current_node):
-    if current_node in came_from:
-        p = reconstruct_path(came_from, came_from[current_node])
-        return (p + [current_node])
-    else:
-        return []
+    totalPath = [current_node]
+    while current_node in came_from.keys():
+        current_node = came_from[current_node]
+        totalPath.append(current_node)
+    return totalPath
 
 
 def astar(env, start_node, goal):
     g_score = {}
     f_score = {}
-
     came_from = {}
-
     openset = [start_node.id]
     g_score[start_node.id] = 0
     f_score[start_node.id] = distance(env, start_node, goal)
@@ -48,12 +46,14 @@ def astar(env, start_node, goal):
 
         if goal in env.graph.get_node(x).adj:
             came_from[goal.id] = x
-            return reconstruct_path(came_from, goal.id)[:-1]
+            path = reconstruct_path(came_from, goal.id)[:-1]
+            path.reverse()
+            return path
 
         openset.remove(x)
 
         for y in env.graph.get_node(x).adj:
-            if y.type == Tile.WALKABLE:
+            if y.type == Tile.WALKABLE or y.type == Tile.ROBOT:
                 if y.id not in g_score:
                     g_score[y.id] = math.inf
 
@@ -64,7 +64,6 @@ def astar(env, start_node, goal):
                     f_score[y.id] = g_score[y.id] + distance(env, y, goal)
                     if y.id not in openset:
                         openset.append(y.id)
-
     return []
 
 
@@ -72,8 +71,6 @@ def _singleAstarPP(dic, env, node, node2):
     res = astar(env, node, node2)
     if node.id in dic:
         if len(res) < len(dic[node.id]):
-            dic[node.id] = res
-        else:
             dic[node.id] = res
 
 
@@ -83,6 +80,12 @@ def _singleAstarWP(dic, env, node, node2):
         dic[node.id][node2.id] = res
     else:
         dic[node.id] = {node2.id: res}
+    for i in range(len(res)):
+        nodeid = res[i]
+        if nodeid in dic:
+            dic[nodeid][node2.id] = res[i+1:]
+        else:
+            dic[nodeid] = {node2.id: res[i+1:]}
 
 
 def computeAstarRoutes(env):
@@ -98,8 +101,13 @@ def computeAstarRoutes(env):
         if node.type == Tile.WALKABLE or node.type == Tile.ROBOT:
             for node2 in env.graph.nodes:
                 if node2.type == Tile.POD:
-                    job.append(mp.Process(target=_singleAstarWP,
-                                          args=(astarRoutes, env, node, node2)))
+                    done = False
+                    if node.id in astarRoutes:
+                        if node2.id in astarRoutes[node.id]:
+                            done = True
+                    if not done:
+                        job.append(mp.Process(target=_singleAstarWP,
+                                              args=(astarRoutes, env, node, node2)))
     tot = len(job)
     perc = 0
     while(job != []):
