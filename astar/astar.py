@@ -2,6 +2,8 @@ from simulation.tile import Tile
 import math
 import multiprocessing as mp
 
+manager = mp.Manager()
+
 
 def average_point(listOfPoints):
     x = 0
@@ -70,7 +72,9 @@ def _singleAstarPP(dic, env, node, node2):
         if len(res) < len(dic[node.id]):
             dic[node.id] = res
     else:
-        dic[node.id] = {node2.id: res}
+        subDic = manager.dict()
+        subDic[node2.id] = res
+        dic[node.id] = subDic
 
 
 def _singleAstarWP(dic, env, node, node2):
@@ -78,17 +82,20 @@ def _singleAstarWP(dic, env, node, node2):
     if node.id in dic:
         dic[node.id][node2.id] = res
     else:
-        dic[node.id] = {node2.id: res}
+        subDic = manager.dict()
+        subDic[node2.id] = res
+        dic[node.id] = subDic
     for i in range(len(res)-1):
         nodeid = res[i]
         if nodeid in dic:
             dic[nodeid][node2.id] = res[i+1:]
         else:
-            dic[nodeid] = {node2.id: res[i+1:]}
+            subDic = manager.dict()
+            subDic[node2.id] = res[i+1:]
+            dic[nodeid] = subDic
 
 
 def computeAstarRoutes(env):
-    manager = mp.Manager()
     job = []
     astarRoutes = manager.dict()
     for node in env.graph.nodes:
