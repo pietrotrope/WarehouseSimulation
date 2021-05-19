@@ -39,6 +39,17 @@ class Environment:
         picking_stations_columns = [x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
+    def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
+        if coord is not None:
+            node = self.graph.get_node(self.raster_to_graph[coord])
+            node.type = tile
+            self.raster_map[coord[0]][coord[1]] = tile.value
+        if key is not None:
+            node = self.graph.get_node(key)
+            node.type = tile
+            x, y = self.key_to_raster(key)
+            self.raster_map[x][y] = tile.value
+
     def __load_map(self, map_path):
         map_path = 'map.csv' if map_path is None else map_path
         self.raster_map = np.array(pd.read_csv(map_path, header=None))
