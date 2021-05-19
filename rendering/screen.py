@@ -37,7 +37,6 @@ class Screen:
     def update_map(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))
-            print('connected')
             sock.sendall(b'map')
             buf = b''
             while True:
@@ -47,7 +46,6 @@ class Screen:
                 buf += resp
 
             data = buf.decode()
-            print(data)
             raster_map = np.array(json.loads(data))
             sock.sendall(b'bye')
             sock.close()
