@@ -9,9 +9,8 @@ def average_point(listOfPoints):
     for point in listOfPoints:
         x += point[0]
         y += point[1]
-    x = x/len(listOfPoints)
-    y = y/len(listOfPoints)
-    return (x, y)
+    tot = len(listOfPoints)
+    return (x/tot, y/tot)
 
 
 def distance(env, start_node, goal):
@@ -44,8 +43,7 @@ def astar(env, start_node, goal):
             if f_score[node_id] < f_score[x]:
                 x = node_id
 
-        if goal in env.graph.get_node(x).adj:
-            came_from[goal.id] = x
+        if x == goal.id:
             path = reconstruct_path(came_from, goal.id)[:-1]
             path.reverse()
             return path
@@ -53,7 +51,7 @@ def astar(env, start_node, goal):
         openset.remove(x)
 
         for y in env.graph.get_node(x).adj:
-            if y.type == Tile.WALKABLE or y.type == Tile.ROBOT:
+            if (y.type == Tile.WALKABLE or y.type == Tile.ROBOT or y.id == goal.id):
                 if y.id not in g_score:
                     g_score[y.id] = math.inf
 
@@ -72,6 +70,8 @@ def _singleAstarPP(dic, env, node, node2):
     if node.id in dic:
         if len(res) < len(dic[node.id]):
             dic[node.id] = res
+    else:
+        dic[node.id] = {node2.id: res}
 
 
 def _singleAstarWP(dic, env, node, node2):
@@ -80,7 +80,7 @@ def _singleAstarWP(dic, env, node, node2):
         dic[node.id][node2.id] = res
     else:
         dic[node.id] = {node2.id: res}
-    for i in range(len(res)):
+    for i in range(len(res)-1):
         nodeid = res[i]
         if nodeid in dic:
             dic[nodeid][node2.id] = res[i+1:]
@@ -96,31 +96,33 @@ def computeAstarRoutes(env):
         if node.type == Tile.POD:
             for node2 in env.graph.nodes:
                 if node2.type == Tile.PICKING_STATION:
-                    job.append(mp.Process(target=_singleAstarPP,
-                                          args=(astarRoutes, env, node, node2)))
+                    job.append((astarRoutes, env, node, node2))
         if node.type == Tile.WALKABLE or node.type == Tile.ROBOT:
             for node2 in env.graph.nodes:
                 if node2.type == Tile.POD:
-                    done = False
-                    if node.id in astarRoutes:
-                        if node2.id in astarRoutes[node.id]:
-                            done = True
-                    if not done:
-                        job.append(mp.Process(target=_singleAstarWP,
-                                              args=(astarRoutes, env, node, node2)))
+                    job.append((astarRoutes, env, node, node2))
     tot = len(job)
     perc = 0
     while(job != []):
         tmp = []
         x = 0
-        while(job != [] and x < 10):
-            tmp.append(job.pop(0))
-            x += 1
+        while(job != [] and len(tmp) < 10):
+            newJob = job.pop(0)
+            done = False
+            if newJob[2].id in astarRoutes:
+                if newJob[3].id in astarRoutes[newJob[2].id]:
+                    done = True
+            if not done:
+                if newJob[2].type == Tile.POD:
+                    tmp.append(mp.Process(target=_singleAstarPP, args=newJob))
+                else:
+                    tmp.append(mp.Process(target=_singleAstarWP, args=newJob))
+
         _ = [p.start() for p in tmp]
         _ = [p.join() for p in tmp]
-        percTmp = round((tot-len(job))/tot, 2)
+
+        percTmp = round((tot-len(job))/tot, 2)*100
         if percTmp != perc:
             print(str(percTmp)+"%")
             perc = percTmp
-    print(dict(astarRoutes))
     return dict(astarRoutes)

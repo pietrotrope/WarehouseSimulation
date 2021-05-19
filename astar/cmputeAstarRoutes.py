@@ -3,7 +3,7 @@ from astar.astar import computeAstarRoutes
 import time
 import json
 
-def computeAstarRoutes():
+def AstarRoutesToFile():
     env = Environment()
     start = time.time()
     dic = computeAstarRoutes(env)
