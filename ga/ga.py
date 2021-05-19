@@ -61,8 +61,7 @@ class GA:
 
     def __generatepopulation(self, seed):
         np.random.seed(seed)
-        return np.asarray([np.random.permutation(self.baseIndividual).tolist() for i in range(self.popsize)])
-        #controllare il tolist
+        return np.asarray([np.random.permutation(self.baseIndividual) for i in range(self.popsize)])
 
     # population here must be a popsize x (n+m) dataframe, where the last column represents the fitness value
     def __selection(self, population):
@@ -83,7 +82,7 @@ class GA:
                 if r <= cumsum[j]:
                     selectedremaining[i] = j
                     break
-        notelite = remaining.iloc[selectedremaining, 0:lastcol] #posso togliere 0:lastcol e lasciare :
+        notelite = remaining.iloc[selectedremaining, 0:lastcol]
         return (elite.append(notelite)).to_numpy()
 
     # parent1, parent2: np array
