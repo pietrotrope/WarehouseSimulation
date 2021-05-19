@@ -35,13 +35,13 @@ class GA:
         assignments = self.chromosome_to_schedule(chromosome)
 
         # results should be an array in the form [TT, TTC, BU]
-        results = self.simulation()
+        TT, TTC, BU = self.simulation(assignments)
 
         maxtest = max([len(assignments[i]) for i in range(self.m)])
         totaltest = self.n
-        Fx = maxtest / results[0] + totaltest / results[1] + results[2]
+        Fx = maxtest / TT + totaltest / TTC + BU
 
-        return [Fx, results[0], results[1], results[2]]
+        return Fx
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
     def chromosome_to_schedule(self, chromosome):
@@ -62,6 +62,7 @@ class GA:
     def __generatepopulation(self, seed):
         np.random.seed(seed)
         return np.asarray([np.random.permutation(self.baseIndividual).tolist() for i in range(self.popsize)])
+        #controllare il tolist
 
     # population here must be a popsize x (n+m) dataframe, where the last column represents the fitness value
     def __selection(self, population):
@@ -77,11 +78,12 @@ class GA:
         remaining = remaining.iloc[:, 0:lastcol]
         for i in range(len(remaining)):
             r = np.random.rand()
+            #ricerca binaria
             for j in range(len(cumsum)):
                 if r <= cumsum[j]:
                     selectedremaining[i] = j
                     break
-        notelite = remaining.iloc[selectedremaining, 0:lastcol]
+        notelite = remaining.iloc[selectedremaining, 0:lastcol] #posso togliere 0:lastcol e lasciare :
         return (elite.append(notelite)).to_numpy()
 
     # parent1, parent2: np array
@@ -97,25 +99,25 @@ class GA:
         off1[0:(a2 - a1 + 1)] = parent2[a1:a2 + 1]
         off2[0:(a2 - a1 + 1)] = parent1[a1:a2 + 1]
 
-        k = 1
+        k1 = 1
+        k2 = 1
         for i in range(chromlen):
             if parent1[i] not in off1[0:(a2 - a1 + 1)]:
-                off1[a2 - a1 + k] = parent1[i]
-                k = k + 1
-        k = 1
-        for i in range(chromlen):
+                off1[a2 - a1 + k1] = parent1[i]
+                k1 += 1
             if parent2[i] not in off2[0:(a2 - a1 + 1)]:
-                off2[a2 - a1 + k] = parent2[i]
-                k = k + 1
-        return np.array([off1, off2])
+                off2[a2 - a1 + k2] = parent2[i]
+                k2 += 1
+
+        return off1, off2
 
     # population: np array
     def crossover(self, population):
         newpopulation = [0] * len(population)
         for i in range(0, len(population), 2):
-            pair = self.crossover_pair(population[i, :], population[i + 1, :])
-            newpopulation[i] = pair[0]
-            newpopulation[i + 1] = pair[1]
+            off1, off2 = self.crossover_pair(population[i, :], population[i + 1, :])
+            newpopulation[i] = off1
+            newpopulation[i + 1] = off2
         return np.array(newpopulation)
 
     # population here is a len(elite) x (n+m-1) np array
@@ -134,12 +136,11 @@ class GA:
 
     def run(self):
         # eval the initial population
-        # Fx = self.fitness(self.initialPopulation)
-        Fx = map(self.__fitness, self.initialPopulation)
-
+        Fx = list(map(self.__fitness, self.initialPopulation))
         lastcol = self.n + self.m - 1
         df = pd.DataFrame(self.initialPopulation)
         df[lastcol] = Fx
+        initial = df
 
         for i in range(0, self.maxepoc):
             if i >= 1000:
@@ -157,8 +158,7 @@ class GA:
             # tmpmutated = self.mutation(tmpcrossed)
 
             offspring = np.concatenate((elite, mutated))
-            # Fx = self.fitness(offspring)
-            Fx = []
+            Fx = list(map(self.__fitness, offspring))
             df = pd.DataFrame(offspring)
             df[lastcol] = Fx
-        return df
+        return initial, df
