@@ -24,9 +24,10 @@ class CommunicationHandler(socketserver.BaseRequestHandler):
                 raster_map = raster_map.tolist()
                 json_map = json.dumps(raster_map)
                 json_map = json_map.encode()
-                self.request.send(json_map)
+                self.request.sendall(json_map)
+                return
             if data.strip() == 'bye':
                 return
 
     def finish(self) -> None:
-        self.request.send(b'bye')
+        pass

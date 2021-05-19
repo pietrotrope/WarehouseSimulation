@@ -17,7 +17,7 @@ for node in env.graph.nodes:
 
 
 for pod in pods:
-    point = env.graph_to_raster[pod.id][0]
+    point = env.key_to_raster(pod.id)[0]
     plt.scatter(point[1], point[0])
 plt.show()
 
