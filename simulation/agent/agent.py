@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import socket
 import socketserver
@@ -18,11 +19,15 @@ def talk_to(agent_id, msg):
 class Agent(threading.Thread):
 
     def __init__(self, agent_id, position):
-        super().__init__()
-        self.id = id
+        self.id = agent_id
         self.position = position
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
         self.rx_queue = Queue()
-        server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(id), CommunicationHandler)
+        if not os.path.exists('/tmp/agents'):
+            os.mkdir('/tmp/agents')
+        server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), CommunicationHandler)
         server.rx_queue = self.rx_queue
+        self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
+        self.srv.start()
+        super().__init__()

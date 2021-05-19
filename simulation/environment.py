@@ -7,6 +7,8 @@ from simulation.graph.graph import Graph
 from simulation.enviroment_server import CommunicationHandler
 import threading
 
+lock = threading.Lock()
+
 
 class Environment:
 
@@ -24,8 +26,8 @@ class Environment:
 
         server = socketserver.ThreadingTCPServer(('localhost', 50666), CommunicationHandler)
         server.raster_map = self.raster_map
-        srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
-        srv.start()
+        self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
+        self.srv.start()
         print('Server listening at localhost:50666')
 
     def key_to_raster(self, key):
@@ -40,15 +42,16 @@ class Environment:
         return len(picking_stations_columns)
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
-        if coord is not None:
-            node = self.graph.get_node(self.raster_to_graph[coord])
-            node.type = tile
-            self.raster_map[coord[0]][coord[1]] = tile.value
-        if key is not None:
-            node = self.graph.get_node(key)
-            node.type = tile
-            x, y = self.key_to_raster(key)
-            self.raster_map[x][y] = tile.value
+        with lock:
+            if coord is not None:
+                node = self.graph.get_node(self.raster_to_graph[coord])
+                node.type = tile
+                self.raster_map[coord[0]][coord[1]] = tile.value
+            if key is not None:
+                node = self.graph.get_node(key)
+                node.type = tile
+                x, y = self.key_to_raster(key)
+                self.raster_map[x][y] = tile.value
 
     def __load_map(self, map_path):
         map_path = 'map.csv' if map_path is None else map_path
