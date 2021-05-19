@@ -121,7 +121,6 @@ class GA:
 
     # population here is a len(elite) x (n+m-1) np array
     def mutation(self, population):
-        df = pd.DataFrame(population)
         chromlen = len(population[0])
         for i in range(len(population)):
             r = np.random.rand()
