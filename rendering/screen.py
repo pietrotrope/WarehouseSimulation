@@ -3,21 +3,20 @@ from simulation.tile import Tile, tileColor
 import socket
 import json
 import numpy as np
-import random
-
-HOST, PORT = 'localhost', 50666
 
 class Screen:
 
-    def __init__(self, tileSize, screenWidth=800, screenHeight=600):
+    def __init__(self, tile_size, screen_width=800, screen_height=600, host='localhost', port=50666):
         pygame.init()
-        self.screen = pygame.display.set_mode((screenWidth, screenHeight))
+        self.screen = pygame.display.set_mode((screen_width, screen_height))
         self.done = False
-        self.tileSize = tileSize
+        self.tileSize = tile_size
         self.map = None
+        self.host = host
+        self.port = port
         self.clock = pygame.time.Clock()
 
-    def drawSquare(self, x, y, col):
+    def draw_square_(self, x, y, col):
         pygame.draw.rect(self.screen,
                          col,
                          pygame.Rect(y * self.tileSize + 1,
@@ -26,22 +25,30 @@ class Screen:
                                      self.tileSize - 1))
 
     def draw(self):
-        self.get_map()
+        self.update_map()
         for x in range(len(self.map)):
             for y in range(len(self.map[0])):
-                self.drawSquare(x, y, tileColor[self.map[x][y]])
+                self.draw_square_(x, y, tileColor[self.map[x][y]])
 
-    def showFrame(self):
+    def draw_frame(self):
         self.draw()
         pygame.display.flip()
 
-    def get_map(self):
+    def update_map(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((HOST, PORT))
+            sock.connect((self.host, self.port))
+            print('connected')
             sock.sendall(b'map')
-            resp = sock.recv(8192)
-            resp = resp.decode()
-            raster_map = np.array(json.loads(resp))
+            buf = b''
+            while True:
+                resp = sock.recv(1024)
+                if not resp:
+                    break
+                buf += resp
+
+            data = buf.decode()
+            print(data)
+            raster_map = np.array(json.loads(data))
             sock.sendall(b'bye')
             sock.close()
         self.map = raster_map
@@ -49,7 +56,7 @@ class Screen:
     def run(self):
         while not self.done:
             self.clock.tick(30)
-            self.showFrame()
+            self.draw_frame()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.done = True
