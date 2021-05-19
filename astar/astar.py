@@ -14,16 +14,15 @@ def average_point(listOfPoints):
 
 
 def distance(env, start_node, goal):
-    p1 = env.key_to_raster(start_node.id)
-    p2 = env.key_to_raster(goal.id)
-    x1, y1 = average_point(p1)
-    x2, y2 = average_point(p2)
+    x1, y1 = average_point(env.key_to_raster(start_node.id))
+    x2, y2 = average_point(env.key_to_raster(goal.id))
     return math.sqrt(abs(x1-x2)) + math.sqrt(abs(y1-y2))
 
 
 def reconstruct_path(came_from, current_node):
-    totalPath = [current_node]
-    while current_node in came_from.keys():
+    totalPath = []
+    came_from_keys = came_from.keys()
+    while current_node in came_from_keys:
         current_node = came_from[current_node]
         totalPath.append(current_node)
     return totalPath
