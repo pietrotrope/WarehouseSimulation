@@ -15,7 +15,7 @@ class Screen:
         self.done = False
         self.tileSize = tileSize
         self.map = None
-        clock = pygame.time.Clock()
+        self.clock = pygame.time.Clock()
 
     def drawSquare(self, x, y, col):
         pygame.draw.rect(self.screen,
@@ -42,10 +42,13 @@ class Screen:
             resp = sock.recv(8192)
             resp = resp.decode()
             raster_map = np.array(json.loads(resp))
+            sock.sendall(b'bye')
+            sock.close()
         self.map = raster_map
 
     def run(self):
         while not self.done:
+            self.clock.tick(30)
             self.showFrame()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
