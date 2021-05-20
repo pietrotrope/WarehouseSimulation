@@ -2,6 +2,7 @@ import socketserver
 import json
 from typing import Tuple, Callable
 import numpy as np
+import logging
 
 
 class CommunicationServer(socketserver.BaseServer):
@@ -9,25 +10,23 @@ class CommunicationServer(socketserver.BaseServer):
                  server_address: Tuple[str, int],
                  RequestHandlerClass: Callable[..., socketserver.BaseRequestHandler],
                  raster_map):
-        super().__init__(server_address, RequestHandlerClass)
         self.raster_map = raster_map
+        logging.info('Environment server listening at {}:{}'.format(server_address[0], server_address[1]))
+        super().__init__(server_address, RequestHandlerClass)
 
 
 class CommunicationHandler(socketserver.BaseRequestHandler):
 
     def handle(self) -> None:
-        while True:
-            data = self.request.recv(1024)
-            data = data.decode()
-            if data.strip() == 'map':
-                raster_map = self.server.raster_map
-                raster_map = raster_map.tolist()
-                json_map = json.dumps(raster_map)
-                json_map = json_map.encode()
-                self.request.sendall(json_map)
-                return
-            if data.strip() == 'bye':
-                return
+        data = self.request.recv(1024)
+        data = data.decode()
+        if data.strip() == 'map':
+            raster_map = self.server.raster_map
+            raster_map = raster_map.tolist()
+            json_map = json.dumps(raster_map)
+            json_map = json_map.encode()
+            self.request.sendall(json_map)
+            return
 
     def finish(self) -> None:
         pass

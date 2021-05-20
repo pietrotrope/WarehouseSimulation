@@ -28,12 +28,11 @@ class Environment:
         server.raster_map = self.raster_map
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()
-        print('Server listening at localhost:50666')
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
 
-    def get_picking_stations_number(self):
+    def __get_picking_stations_number(self):
         picking_stations_columns = np.count_nonzero(self.raster_map == 4, axis=0)
         picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
         picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
@@ -59,33 +58,34 @@ class Environment:
         self.map_shape = self.raster_map.shape
 
     def __gen_graph(self):
-        graph_nodes = self.map_shape[0] * \
-                      self.map_shape[1] - \
+        picking_station_number = self.__get_picking_stations_number()
+
+        graph_nodes = self.map_shape[0] * self.map_shape[1] - \
                       (np.count_nonzero(self.raster_map == 4) -
-                       self.get_picking_stations_number())
+                       picking_station_number)
         self.graph = Graph(graph_nodes)
 
-        picking_stations = [[], [], []]
-        upper_station = [[], [], []]
+        picking_stations = [[] for i in range(picking_station_number)]
+        upper_station = [[] for i in range(picking_station_number)]
         count = -1
 
         for i in range(self.map_shape[0]):
-            picking_station_number = -1
+            current_picking_station = -1
             for j in range(self.map_shape[1]):
                 if self.raster_map[i][j] == 4:
                     if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
-                        picking_station_number = picking_station_number + 1
+                        current_picking_station = current_picking_station + 1
                         count += 1
-                        upper_station[picking_station_number] = (i, j)
+                        upper_station[current_picking_station] = (i, j)
                         node = self.graph.get_node(count)
                         node.coord = [(i, j)]
                         node.type = Tile(self.raster_map[i][j])
-                        picking_stations[picking_station_number].append((i, j))
+                        picking_stations[current_picking_station].append((i, j))
                         self.raster_to_graph[(i, j)] = count
                     elif self.raster_map[i][j - 1] == 0:
-                        picking_station_number += 1
-                    self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[picking_station_number]]
-                    picking_stations[picking_station_number].append((i, j))
+                        current_picking_station += 1
+                    self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
+                    picking_stations[current_picking_station].append((i, j))
                 else:
                     count += 1
                     node = self.graph.get_node(count)

@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 import os
 import threading
 import socket
@@ -16,7 +17,7 @@ def talk_to(agent_id, msg):
         sock.close()
 
 
-class Agent(threading.Thread):
+class Agent(multiprocessing.Process):
 
     def __init__(self, agent_id, position):
         self.id = agent_id

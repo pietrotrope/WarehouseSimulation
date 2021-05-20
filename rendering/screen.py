@@ -47,7 +47,6 @@ class Screen:
 
             data = buf.decode()
             raster_map = np.array(json.loads(data))
-            sock.sendall(b'bye')
             sock.close()
         self.map = raster_map
 
