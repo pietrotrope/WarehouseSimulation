@@ -4,6 +4,7 @@ import socket
 import json
 import numpy as np
 
+
 class Screen:
 
     def __init__(self, tile_size, screen_width=800, screen_height=600, host='localhost', port=50666):

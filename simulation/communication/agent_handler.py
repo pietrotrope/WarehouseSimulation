@@ -17,16 +17,16 @@ class AgentHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         msg = json.load(self.rfile)
         if msg['req'] == 'get_graph':
-            # return only nodes close to the agent
+            # TODO: return only nodes close to the agent
             pass
         elif msg['req'] == 'move':
-            # Update map with new agent postion
+            # TODO: Update map with new agent position
             pass
         elif msg['req'] == 'pick_pod':
-            # Set picked pod as taken
+            # TODO: Set picked pod as taken
             pass
         elif msg['req'] == 'leave_pod':
-            # Set agent pod as free
+            # TODO: Set agent pod as free
             pass
         # Maybe get task?
 

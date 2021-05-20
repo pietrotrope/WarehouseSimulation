@@ -17,7 +17,7 @@ class CommunicationHandler(socketserver.StreamRequestHandler):
 
     def handle(self) -> None:
         msg = json.load(self.rfile)
-        self.server.rx_queue.put(msg)
+        self.server.rx_queue.put(msg)  # Is this queue necessary? All needed communication can be handled here
 
     def finish(self) -> None:
         pass

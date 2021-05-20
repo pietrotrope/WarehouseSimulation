@@ -5,7 +5,7 @@ class Tile(Enum):
     WALKABLE = 0
     ROBOT = 1
     POD = 2
-    PODTAKEN = 3
+    POD_TAKEN = 3
     PICKING_STATION = 4
 
 
