@@ -5,7 +5,7 @@ import numpy as np
 import logging
 
 
-class CommunicationServer(socketserver.BaseServer):
+class EnvironmentServer(socketserver.BaseServer):
     def __init__(self,
                  server_address: Tuple[str, int],
                  RequestHandlerClass: Callable[..., socketserver.BaseRequestHandler],
@@ -15,7 +15,7 @@ class CommunicationServer(socketserver.BaseServer):
         super().__init__(server_address, RequestHandlerClass)
 
 
-class CommunicationHandler(socketserver.BaseRequestHandler):
+class EnvironmentToScreenServer(socketserver.BaseRequestHandler):
 
     def handle(self) -> None:
         data = self.request.recv(1024)

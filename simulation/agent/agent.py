@@ -5,6 +5,7 @@ import threading
 import socket
 import socketserver
 from queue import Queue
+from multiprocessing import shared_memory
 
 from simulation.agent.agent_communication import CommunicationHandler
 

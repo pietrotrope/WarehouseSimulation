@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
-from simulation.enviroment_server import CommunicationHandler
+from simulation.communication.enviroment_server import EnvironmentToScreenServer
 import threading
 
 lock = threading.Lock()
@@ -24,7 +24,7 @@ class Environment:
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
-        server = socketserver.ThreadingTCPServer(('localhost', 50666), CommunicationHandler)
+        server = socketserver.ThreadingTCPServer(('localhost', 50666), EnvironmentToScreenServer)
         server.raster_map = self.raster_map
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()
