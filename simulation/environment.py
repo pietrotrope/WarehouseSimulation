@@ -1,7 +1,10 @@
+import os
 import socketserver
 
 import pandas as pd
 import numpy as np
+
+from simulation.communication.agent_handler import AgentHandler
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from simulation.communication.enviroment_server import EnvironmentToScreenServer
@@ -26,8 +29,15 @@ class Environment:
 
         server = socketserver.ThreadingTCPServer(('localhost', 50666), EnvironmentToScreenServer)
         server.raster_map = self.raster_map
+
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()
+
+        agent_server = socketserver.ThreadingUnixStreamServer('/tmp/environment', AgentHandler)
+        agent_server.env = self
+
+        self.agent_handler = threading.Thread(target=agent_server.serve_forever, args=(), daemon=True)
+        self.agent_handler.start()
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
