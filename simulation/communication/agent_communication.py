@@ -4,7 +4,7 @@ from typing import Tuple, Callable
 import numpy as np
 
 
-class CommunicationServer(socketserver.BaseServer):
+class AgentCommunicationServer(socketserver.BaseServer):
     def __init__(self,
                  server_address: Tuple[str, int],
                  RequestHandlerClass: Callable[..., socketserver.StreamRequestHandler],
@@ -13,7 +13,7 @@ class CommunicationServer(socketserver.BaseServer):
         self.rx_queue = rx_queue
 
 
-class CommunicationHandler(socketserver.StreamRequestHandler):
+class AgentCommunicationHandler(socketserver.StreamRequestHandler):
 
     def handle(self) -> None:
         msg = json.load(self.rfile)

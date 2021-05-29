@@ -7,15 +7,7 @@ import socketserver
 from direction import Direction
 from queue import Queue
 
-from simulation.communication.agent_communication import CommunicationHandler
-
-
-def talk_to(agent_id, msg):
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-        sock.connect('/tmp/agents/{}'.format(agent_id))
-        msg = json.dumps(msg)
-        sock.sendall(bytes(msg+'\n', 'utf-8'))
-        sock.close()
+from simulation.communication.agent_communication import AgentCommunicationHandler
 
 
 class Agent(multiprocessing.Process):
@@ -29,7 +21,7 @@ class Agent(multiprocessing.Process):
         self.rx_queue = Queue()
         if not os.path.exists('/tmp/agents'):
             os.mkdir('/tmp/agents')
-        server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), CommunicationHandler)
+        server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), AgentCommunicationHandler)
         server.rx_queue = self.rx_queue
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()
@@ -52,19 +44,27 @@ class Agent(multiprocessing.Process):
             sock.close()
         return res
 
+    @staticmethod
+    def talk_to(agent_id, msg):
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.connect('/tmp/agents/{}'.format(agent_id))
+            msg = json.dumps(msg)
+            sock.sendall(bytes(msg + '\n', 'utf-8'))
+            sock.close()
+
     def watch(self):
-        req = {'req': 'get_graph', 'id': str(self.id)}
+        req = {'req': 'watch', 'id': str(self.id)}
         res = self.__communicate_to_env(req)
         self.vision = res['res']
 
     def move(self):
-        req = {'req': 'move', 'id': str(self.id), 'dir': str(self.direction.value)}
+        req = {'req': 'move', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)
 
     def pick_pod(self):
-        req = {'req': 'pick_pod', 'id': str(self.id), 'direction': str(self.direction.value)}
+        req = {'req': 'pick_pod', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)
 
     def leave_pod(self):
-        req = {'req': 'leave_pod', 'id': str(self.id), 'direction': str(self.direction.value)}
+        req = {'req': 'leave_pod', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)

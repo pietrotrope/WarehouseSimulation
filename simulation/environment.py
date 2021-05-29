@@ -1,9 +1,11 @@
 import os
+import yaml
 import socketserver
 
 import pandas as pd
 import numpy as np
 
+from simulation.agent.agent import Agent
 from simulation.communication.agent_handler import AgentHandler
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
@@ -15,14 +17,16 @@ lock = threading.Lock()
 
 class Environment:
 
-    def __init__(self, map_path=None):
+    def __init__(self, map_path=None, cfg_path='../config.yaml'):
         self.raster_map = None
-        self.map_shape = None
+        self.map_shape = ()
         self.graph = None
+        self.agents = {}
         self.raster_to_graph = {}
         self.__id = 0
         self.__load_map(map_path)
         self.__gen_graph()
+        self.__spawn_agents(cfg_path)
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
@@ -112,3 +116,18 @@ class Environment:
         for picking_station in picking_stations:
             node = self.graph.get_node(self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
+
+    def __spawn_agents(self, cfg_path):
+        with open(cfg_path) as f:
+            config = yaml.safe_dump(f)
+
+        num_agents = config['agent_number']
+        agent_positions = config['agent_positions']
+
+        self.agents = np.zeros(num_agents)
+
+        for i in range(num_agents):
+            agent = Agent(i, agent_positions[i])
+            self.agents[i] = {'Agent': agent,
+                              'Position': agent.position}
+            self.update_map(coord=agent.position, tile=Tile.ROBOT)
