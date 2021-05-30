@@ -4,7 +4,9 @@ import os
 import threading
 import socket
 import socketserver
-from direction import Direction
+import time
+
+from .direction import Direction
 from queue import Queue
 
 from simulation.communication.agent_communication import AgentCommunicationHandler
@@ -32,6 +34,7 @@ class Agent(multiprocessing.Process):
             os.mkdir('/tmp/agents')
         server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), AgentCommunicationHandler)
         server.rx_queue = self.rx_queue
+        server.agent_id = self.id
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()
         self.vision = None
@@ -83,4 +86,7 @@ class Agent(multiprocessing.Process):
 
     def run(self):
         while True:
-            pass
+            time.sleep(0.1)
+
+    def __exit__(self):
+        self.talk_to(self.id, json.dumps({'req': 'shutdown'}))

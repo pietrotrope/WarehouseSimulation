@@ -27,6 +27,8 @@ class EnvironmentToScreenServer(socketserver.BaseRequestHandler):
             json_map = json_map.encode()
             self.request.sendall(json_map)
             return
+        if data.strip == 'shutdown':
+            self.server.shutdown()
 
     def finish(self) -> None:
         pass

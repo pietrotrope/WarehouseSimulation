@@ -1,3 +1,4 @@
+import os
 import socketserver
 import json
 from typing import Tuple, Callable
@@ -80,6 +81,9 @@ class AgentHandler(socketserver.StreamRequestHandler):
                 pod_node.agent_id = None
                 self.server.env.update_map(coord=pod_position, tile=Tile.POD)
             return
+        elif msg['req'] == 'shutdown':
+            self.server.shutdown()
+            os.remove('/tmp/environment')
         # Maybe get task?
 
     def finish(self) -> None:

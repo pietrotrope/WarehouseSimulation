@@ -1,4 +1,7 @@
+import json
 import os
+import socket
+
 import yaml
 import socketserver
 
@@ -10,9 +13,8 @@ from simulation.communication.agent_handler import AgentHandler
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from simulation.communication.enviroment_server import EnvironmentToScreenServer
+import multiprocessing as mp
 import threading
-
-lock = threading.Lock()
 
 
 class Environment:
@@ -55,16 +57,15 @@ class Environment:
         return len(picking_stations_columns)
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
-        with lock:
-            if coord is not None:
-                node = self.graph.get_node(self.raster_to_graph[coord])
-                node.type = tile
-                self.raster_map[coord[0]][coord[1]] = tile.value
-            if key is not None:
-                node = self.graph.get_node(key)
-                node.type = tile
-                x, y = self.key_to_raster(key)
-                self.raster_map[x][y] = tile.value
+        if coord is not None:
+            node = self.graph.get_node(self.raster_to_graph[coord])
+            node.type = tile
+            self.raster_map[coord[0]][coord[1]] = tile.value
+        if key is not None:
+            node = self.graph.get_node(key)
+            node.type = tile
+            x, y = self.key_to_raster(key)
+            self.raster_map[x][y] = tile.value
 
     def __load_map(self, map_path):
         map_path = 'map.csv' if map_path is None else map_path
@@ -82,6 +83,7 @@ class Environment:
         picking_stations = [[] for i in range(picking_station_number)]
         upper_station = [[] for i in range(picking_station_number)]
         count = -1
+        agent_count = 0
 
         for i in range(self.map_shape[0]):
             current_picking_station = -1
@@ -101,6 +103,9 @@ class Environment:
                     self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
                     picking_stations[current_picking_station].append((i, j))
                 else:
+                    if self.raster_map[i][j] == 1:
+                        self.agents[agent_count] = (i, j)
+                        agent_count += 1
                     count += 1
                     node = self.graph.get_node(count)
                     node.coord = [(i, j)]
@@ -118,16 +123,34 @@ class Environment:
             node.coord = picking_station
 
     def __spawn_agents(self, cfg_path):
-        with open(cfg_path) as f:
-            config = yaml.safe_dump(f)
+        positions = self.agents
+        print(positions)
+        self.agents = {}
 
-        num_agents = config['agent_number']
-        agent_positions = config['agent_positions']
+        for i in range(len(positions)):
+            agent = Agent(i, positions[i])
 
-        self.agents = np.zeros(num_agents)
-
-        for i in range(num_agents):
-            agent = Agent(i, agent_positions[i])
             self.agents[i] = {'Agent': agent,
                               'Position': agent.position}
-            self.update_map(coord=agent.position, tile=Tile.ROBOT)
+            agent.start()
+
+    def shutdown(self):
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.connect('/tmp/environment')
+            msg = json.dumps({'req': 'shutdown'})
+            sock.sendall(bytes(msg + '\n', 'utf-8'))
+            sock.close()
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect(('localhost', 50666))
+            sock.sendall(b'shutdown')
+            sock.close()
+
+        for agent in self.agents.keys():
+            print(agent)
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.connect('/tmp/agents/{}'.format(agent))
+                msg = json.dumps({'req': 'shutdown'})
+                sock.sendall(bytes(msg + '\n', 'utf-8'))
+                sock.close()
+            self.agents[agent]['Agent'].terminate()
