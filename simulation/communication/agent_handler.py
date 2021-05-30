@@ -26,7 +26,9 @@ class CommunicationServer(socketserver.BaseServer):
 class AgentHandler(socketserver.StreamRequestHandler):
 
     def handle(self) -> None:
-        msg = json.load(self.rfile)
+        print('Got a connection')
+        a = self.rfile.readline()
+        msg = json.loads(a)
         if msg['req'] == 'watch':
             agent_id = msg['id']
             direction = Direction(msg['content'])
@@ -48,20 +50,23 @@ class AgentHandler(socketserver.StreamRequestHandler):
                         field_of_view[0].append(n)
 
             res = {'res': field_of_view}
-            json.dump(res, self.wfile)
+            self.wfile.write(bytes(json.dumps(res) + '\n', 'utf-8'))
             return
         elif msg['req'] == 'move':
             direction = Direction(msg['content'])
             agent_id = msg['id']
-            node = self.env.graph.get_node(self.raster_to_graph[self.server.env.agents[agent_id]['Position']])
+            node = self.server.env.graph.get_node(self.server.env.raster_to_graph[
+                                                      self.server.env.agents[agent_id]['Position']])
             node.agent_id = None
             self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.WALKABLE)
             self.server.env.agents[agent_id]['Position'] = tuple(map(lambda i, j: i + j,
                                                                      self.server.env.agents[agent_id]['Position'],
                                                                      movement[direction]))
             self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.ROBOT)
-            node = self.env.graph.get_node(self.raster_to_graph[self.server.env.agents[agent_id]['Position']])
+            node = self.server.env.graph.get_node(self.server.env.raster_to_graph[
+                                                      self.server.env.agents[agent_id]['Position']])
             node.agent_id = agent_id
+            self.wfile.write(bytes(json.dumps({'res': True}) + '\n', 'utf-8'))
             return
         elif msg['req'] == 'pick_pod':
             direction = Direction(msg['content'])
@@ -71,6 +76,7 @@ class AgentHandler(socketserver.StreamRequestHandler):
             if pod_node.type == Tile.POD:
                 pod_node.agent_id = agent_id
                 self.server.env.update_map(coord=pod_position, tile=Tile.POD_TAKEN)
+            self.wfile.write(bytes(json.dumps({'res': True}) + '\n', 'utf-8'))
             return
         elif msg['req'] == 'leave_pod':
             direction = Direction(msg['content'])
@@ -80,6 +86,7 @@ class AgentHandler(socketserver.StreamRequestHandler):
             if pod_node.type == Tile.POD_TAKEN and pod_node.agent_id == agent_id:
                 pod_node.agent_id = None
                 self.server.env.update_map(coord=pod_position, tile=Tile.POD)
+            self.wfile.write(bytes(json.dumps({'res': True}) + '\n', 'utf-8'))
             return
         elif msg['req'] == 'shutdown':
             self.server.shutdown()

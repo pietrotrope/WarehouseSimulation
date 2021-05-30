@@ -45,7 +45,7 @@ class Agent(multiprocessing.Process):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
             sock.connect('/tmp/environment')
             msg = json.dumps(req)
-            sock.sendall(bytes(msg + '\n', 'utf-8'))
+            sock.sendall(msg.encode() + b'\n')
             buf = b''
             while True:
                 res = sock.recv(1024)

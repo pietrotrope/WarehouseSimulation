@@ -33,17 +33,22 @@ class Environment:
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
-        server = socketserver.ThreadingTCPServer(('localhost', 50666), EnvironmentToScreenServer)
-        server.raster_map = self.raster_map
+        try:
+            server = socketserver.ThreadingTCPServer(('0.0.0.0', 50666), EnvironmentToScreenServer)
+            server.raster_map = self.raster_map
 
-        self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
-        self.srv.start()
+            self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
+            self.srv.start()
 
-        agent_server = socketserver.ThreadingUnixStreamServer('/tmp/environment', AgentHandler)
-        agent_server.env = self
+            agent_server = socketserver.ThreadingUnixStreamServer('/tmp/environment', AgentHandler)
+            agent_server.env = self
 
-        self.agent_handler = threading.Thread(target=agent_server.serve_forever, args=(), daemon=True)
-        self.agent_handler.start()
+            self.agent_handler = threading.Thread(target=agent_server.serve_forever, args=(), daemon=True)
+            self.agent_handler.start()
+        except OSError:
+            self.shutdown()
+            for agent in self.agents.keys():
+                os.remove('/tmp/agents/{}'.format(agent))
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -135,11 +140,12 @@ class Environment:
             agent.start()
 
     def shutdown(self):
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-            sock.connect('/tmp/environment')
-            msg = json.dumps({'req': 'shutdown'})
-            sock.sendall(bytes(msg + '\n', 'utf-8'))
-            sock.close()
+        if os.path.exists('/tmp/environment'):
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.connect('/tmp/environment')
+                msg = json.dumps({'req': 'shutdown'})
+                sock.sendall(bytes(msg + '\n', 'utf-8'))
+                sock.close()
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect(('localhost', 50666))
@@ -147,10 +153,10 @@ class Environment:
             sock.close()
 
         for agent in self.agents.keys():
-            print(agent)
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-                sock.connect('/tmp/agents/{}'.format(agent))
-                msg = json.dumps({'req': 'shutdown'})
-                sock.sendall(bytes(msg + '\n', 'utf-8'))
-                sock.close()
+            if os.path.exists('/tmp/agents/{}'.format(agent)):
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                    sock.connect('/tmp/agents/{}'.format(agent))
+                    msg = json.dumps({'req': 'shutdown'})
+                    sock.sendall(bytes(msg + '\n', 'utf-8'))
+                    sock.close()
             self.agents[agent]['Agent'].terminate()

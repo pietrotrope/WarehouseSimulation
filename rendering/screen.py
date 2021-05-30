@@ -7,7 +7,7 @@ import numpy as np
 
 class Screen:
 
-    def __init__(self, tile_size, screen_width=800, screen_height=600, host='localhost', port=50666):
+    def __init__(self, tile_size, screen_width=800, screen_height=600, host='test.local', port=50666):
         pygame.init()
         self.screen = pygame.display.set_mode((screen_width, screen_height))
         self.done = False
@@ -59,3 +59,8 @@ class Screen:
                 if event.type == pygame.QUIT:
                     self.done = True
         pygame.quit()
+
+
+if __name__ == '__main__':
+    s = Screen(16)
+    s.run()
