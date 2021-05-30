@@ -12,6 +12,7 @@ movement = {
     Direction.RIGHT: (1, 0)
 }
 
+
 class CommunicationServer(socketserver.BaseServer):
     def __init__(self,
                  server_address: Tuple[str, int],
@@ -27,31 +28,56 @@ class AgentHandler(socketserver.StreamRequestHandler):
         msg = json.load(self.rfile)
         if msg['req'] == 'watch':
             agent_id = msg['id']
+            direction = Direction(msg['content'])
             pos = self.server.env.agents[agent_id]['Position']
             node = self.server.env.graph.get_node(self.server.env.raster_to_graph[pos])
-            view_range = []
+            field_of_view = [[], [], []]
             for n in node.adj:
-                if n.type == Tile.WALKABLE or n.type == Tile.PICKING_STATION:
-                    for nn in n.adj:
-                        if nn not in view_range:
-                            view_range.append(nn)
+                if pos + movement[direction] == n.coord:
+                    if n.type == Tile.WALKABLE or n.type == Tile.PICKING_STATION:
+                        for nn in n.adj:
+                            for nnn in nn.adj:
+                                if nnn not in field_of_view:
+                                    field_of_view[2].append(nnn)
 
-                    if n not in view_range:
-                        view_range.append(n)
-            json.dump(view_range, self.wfile)
+                            if nn not in field_of_view:
+                                field_of_view[1].append(nn)
+
+                    if n not in field_of_view:
+                        field_of_view[0].append(n)
+
+            res = {'res': field_of_view}
+            json.dump(res, self.wfile)
             return
         elif msg['req'] == 'move':
-            dir = Direction(msg['content'])
+            direction = Direction(msg['content'])
             agent_id = msg['id']
+            node = self.env.graph.get_node(self.raster_to_graph[self.server.env.agents[agent_id]['Position']])
+            node.agent_id = None
             self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.WALKABLE)
-            self.server.env.agents[agent_id]['Position'] += movement[dir]
+            self.server.env.agents[agent_id]['Position'] += movement[direction]
             self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.ROBOT)
+            node = self.env.graph.get_node(self.raster_to_graph[self.server.env.agents[agent_id]['Position']])
+            node.agent_id = agent_id
+            return
         elif msg['req'] == 'pick_pod':
-            # TODO: Set picked pod as taken
-            pass
+            direction = Direction(msg['content'])
+            agent_id = msg['id']
+            pod_position = self.server.env.agents[agent_id]['Position'] + movement[direction]
+            pod_node = self.server.env.graph.get_node(pod_position)
+            if pod_node.type == Tile.POD:
+                pod_node.agent_id = agent_id
+                self.server.env.update_map(coord=pod_position, tile=Tile.POD_TAKEN)
+            return
         elif msg['req'] == 'leave_pod':
-            # TODO: Set agent pod as free
-            pass
+            direction = Direction(msg['content'])
+            agent_id = msg['id']
+            pod_position = self.server.env.agents[agent_id]['Position'] + movement[direction]
+            pod_node = self.server.env.graph.get_node(pod_position)
+            if pod_node.type == Tile.POD_TAKEN and pod_node.agent_id == agent_id:
+                pod_node.agent_id = None
+                self.server.env.update_map(coord=pod_position, tile=Tile.POD)
+            return
         # Maybe get task?
 
     def finish(self) -> None:

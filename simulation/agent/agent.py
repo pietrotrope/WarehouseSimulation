@@ -10,12 +10,21 @@ from queue import Queue
 from simulation.communication.agent_communication import AgentCommunicationHandler
 
 
+movement = {
+    Direction.UP: (0, 1),
+    Direction.DOWN: (0, -1),
+    Direction.LEFT: (-1, 0),
+    Direction.RIGHT: (1, 0)
+}
+
+
 class Agent(multiprocessing.Process):
 
     def __init__(self, agent_id, position, direction=Direction.DOWN):
         self.id = agent_id
         self.position = position
         self.direction = direction
+        self.has_pod = False
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
         self.rx_queue = Queue()
@@ -53,18 +62,24 @@ class Agent(multiprocessing.Process):
             sock.close()
 
     def watch(self):
-        req = {'req': 'watch', 'id': str(self.id)}
+        req = {'req': 'watch', 'id': str(self.id),'content': str(self.direction.value)}
         res = self.__communicate_to_env(req)
         self.vision = res['res']
 
     def move(self):
         req = {'req': 'move', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)
+        self.position += movement[self.direction]
 
     def pick_pod(self):
         req = {'req': 'pick_pod', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)
+        self.has_pod = True
 
     def leave_pod(self):
         req = {'req': 'leave_pod', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)
+        self.has_pod = False
+
+    def run(self):
+        pass
