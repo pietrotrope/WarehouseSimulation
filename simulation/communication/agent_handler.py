@@ -55,7 +55,9 @@ class AgentHandler(socketserver.StreamRequestHandler):
             node = self.env.graph.get_node(self.raster_to_graph[self.server.env.agents[agent_id]['Position']])
             node.agent_id = None
             self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.WALKABLE)
-            self.server.env.agents[agent_id]['Position'] += movement[direction]
+            self.server.env.agents[agent_id]['Position'] = tuple(map(lambda i, j: i + j,
+                                                                     self.server.env.agents[agent_id]['Position'],
+                                                                     movement[direction]))
             self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.ROBOT)
             node = self.env.graph.get_node(self.raster_to_graph[self.server.env.agents[agent_id]['Position']])
             node.agent_id = agent_id

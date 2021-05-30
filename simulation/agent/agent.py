@@ -69,7 +69,7 @@ class Agent(multiprocessing.Process):
     def move(self):
         req = {'req': 'move', 'id': str(self.id), 'content': str(self.direction.value)}
         self.__communicate_to_env(req)
-        self.position += movement[self.direction]
+        self.position = tuple(map(lambda i, j: i + j, self.position, movement[self.direction]))
 
     def pick_pod(self):
         req = {'req': 'pick_pod', 'id': str(self.id), 'content': str(self.direction.value)}
@@ -82,4 +82,5 @@ class Agent(multiprocessing.Process):
         self.has_pod = False
 
     def run(self):
-        pass
+        while True:
+            pass
