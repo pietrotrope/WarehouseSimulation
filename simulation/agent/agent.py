@@ -52,7 +52,7 @@ class Agent(multiprocessing.Process):
                 if not res:
                     break
                 buf += res
-            res = json.loads(res.decode())
+            res = json.loads(buf.decode())
             sock.close()
         return res
 

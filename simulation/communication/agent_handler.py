@@ -26,7 +26,6 @@ class CommunicationServer(socketserver.BaseServer):
 class AgentHandler(socketserver.StreamRequestHandler):
 
     def handle(self) -> None:
-        print('Got a connection')
         a = self.rfile.readline()
         msg = json.loads(a)
         if msg['req'] == 'watch':
@@ -67,6 +66,7 @@ class AgentHandler(socketserver.StreamRequestHandler):
                                                       self.server.env.agents[agent_id]['Position']])
             node.agent_id = agent_id
             self.wfile.write(bytes(json.dumps({'res': True}) + '\n', 'utf-8'))
+            self.wfile.flush()
             return
         elif msg['req'] == 'pick_pod':
             direction = Direction(msg['content'])
@@ -77,6 +77,7 @@ class AgentHandler(socketserver.StreamRequestHandler):
                 pod_node.agent_id = agent_id
                 self.server.env.update_map(coord=pod_position, tile=Tile.POD_TAKEN)
             self.wfile.write(bytes(json.dumps({'res': True}) + '\n', 'utf-8'))
+            self.wfile.flush()
             return
         elif msg['req'] == 'leave_pod':
             direction = Direction(msg['content'])
