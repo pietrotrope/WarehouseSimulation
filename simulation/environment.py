@@ -7,6 +7,7 @@ import socketserver
 
 import pandas as pd
 import numpy as np
+import threading
 
 from simulation.agent.agent import Agent
 from simulation.communication.agent_handler import AgentHandler
@@ -14,7 +15,8 @@ from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from simulation.communication.enviroment_server import EnvironmentToScreenServer
 import multiprocessing as mp
-import threading
+from multiprocessing import set_start_method
+set_start_method("fork")
 
 
 class Environment:
