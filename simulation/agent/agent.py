@@ -22,10 +22,11 @@ movement = {
 
 class Agent(multiprocessing.Process):
 
-    def __init__(self, agent_id, position, direction=Direction.DOWN):
+    def __init__(self, agent_id, position, direction=Direction.DOWN, tps=30):
         self.id = agent_id
         self.position = position
         self.direction = direction
+        self.tps = tps
         self.has_pod = False
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
@@ -86,7 +87,11 @@ class Agent(multiprocessing.Process):
 
     def run(self):
         while True:
-            time.sleep(0.1)
+            # TODO: Fetch messages from self.rx_queue
+            # TODO: Do actions based on self.rx_queue messages
+            # TODO: If has_task and has_pod move towards picking_station
+
+            time.sleep(1.0/self.tps)
 
     def __exit__(self):
         self.talk_to(self.id, json.dumps({'req': 'shutdown'}))
