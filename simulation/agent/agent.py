@@ -87,7 +87,7 @@ class Agent(multiprocessing.Process):
 
     def run(self):
         while True:
-            if not self.conflicts:
+            if self.conflicts.empty():
                 # TODO: Fetch messages from self.rx_queue
                 # TODO: Do actions based on self.rx_queue messages
                 # TODO: If has_task and has_pod move towards picking_station
