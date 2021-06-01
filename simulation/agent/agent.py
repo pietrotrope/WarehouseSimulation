@@ -5,6 +5,7 @@ import threading
 import socket
 import socketserver
 import time
+from multiprocessing import Queue
 
 from .direction import Direction
 
@@ -29,7 +30,7 @@ class Agent(multiprocessing.Process):
         self.has_pod = False
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
-        self.conflicts = {}
+        self.conflicts = Queue()
         if not os.path.exists('/tmp/agents'):
             os.mkdir('/tmp/agents')
         server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), AgentCommunicationHandler)

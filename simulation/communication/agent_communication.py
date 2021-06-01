@@ -23,7 +23,7 @@ class AgentCommunicationHandler(socketserver.StreamRequestHandler):
         if msg['req'] == 'shutdown':
             self.server.shutdown()
             os.remove('/tmp/agents/{}'.format(self.server.agent_id))
-        self.server.conflicts[msg['id']] = msg
+        self.server.conflicts.put(msg['req'])
 
     def finish(self) -> None:
         pass
