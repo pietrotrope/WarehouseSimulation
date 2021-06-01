@@ -7,6 +7,7 @@ class Tile(Enum):
     POD = 2
     POD_TAKEN = 3
     PICKING_STATION = 4
+    VISION = 5
 
 
 tileColor = {
@@ -14,5 +15,6 @@ tileColor = {
     1: [0, 0, 0],
     2: [0, 0, 255],
     3: [255, 0, 0],
-    4: [0, 255, 0]
+    4: [0, 255, 0],
+    5: [200, 0, 200]
 }

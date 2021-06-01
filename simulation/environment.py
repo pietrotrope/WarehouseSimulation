@@ -36,6 +36,7 @@ class Environment:
             raise Exception("Error while Initializing environment")
 
         try:
+            socketserver.ThreadingTCPServer.allow_reuse_address = True
             server = socketserver.ThreadingTCPServer(('0.0.0.0', 50666), EnvironmentToScreenServer)
             server.raster_map = self.raster_map
 
@@ -71,7 +72,7 @@ class Environment:
         if key is not None:
             node = self.graph.get_node(key)
             node.type = tile
-            x, y = self.key_to_raster(key)
+            x, y = self.key_to_raster(key)[0]
             self.raster_map[x][y] = tile.value
 
     def __load_map(self, map_path):

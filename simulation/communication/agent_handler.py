@@ -7,8 +7,8 @@ from simulation.agent.direction import Direction
 from simulation.tile import Tile
 
 movement = {
-    Direction.UP: (0, 1),
-    Direction.DOWN: (0, -1),
+    Direction.UP: (0, -1),
+    Direction.DOWN: (0, +1),
     Direction.LEFT: (-1, 0),
     Direction.RIGHT: (1, 0)
 }
@@ -31,19 +31,28 @@ class AgentHandler(socketserver.StreamRequestHandler):
         pos = self.server.env.agents[agent_id]['Position']
         node = self.server.env.graph.get_node(self.server.env.raster_to_graph[pos])
         field_of_view = [[], [], []]
+        blacklist = [node]
         for n in node.adj:
-            if pos + movement[direction] == n.coord:
+            if tuple(map(lambda i, j: i + j, pos, movement[direction])) == n.coord[0]:
                 if n.type == Tile.WALKABLE or n.type == Tile.PICKING_STATION:
                     for nn in n.adj:
-                        for nnn in nn.adj:
-                            if nnn not in field_of_view:
-                                field_of_view[2].append(nnn)
-
-                        if nn not in field_of_view:
-                            field_of_view[1].append(nn)
-
-                if n not in field_of_view:
-                    field_of_view[0].append(n)
+                        if nn not in blacklist:
+                            if n.type == Tile.WALKABLE or n.type == Tile.PICKING_STATION:
+                                for nnn in nn.adj:
+                                    if nnn.coord not in field_of_view:
+                                        if nnn not in blacklist:
+                                            self.server.env.update_map(key=nnn.id, tile=Tile.VISION)
+                                            field_of_view[2].append(nnn.coord)
+                            else:
+                                blacklist.append(nn)
+                        if nn.coord not in field_of_view:
+                            self.server.env.update_map(key=nn.id, tile=Tile.VISION)
+                            field_of_view[1].append(nn.coord)
+                if n.coord not in field_of_view:
+                    self.server.env.update_map(key=n.id, tile=Tile.VISION)
+                    field_of_view[0].append(n.coord)
+            else:
+                blacklist.append(n)
 
         res = {'res': field_of_view}
         self.wfile.write(bytes(json.dumps(res) + '\n', 'utf-8'))
