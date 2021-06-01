@@ -45,11 +45,8 @@ class AgentHandler(socketserver.StreamRequestHandler):
                                 self.server.env.update_map(key=nn.id, tile=Tile.VISION)
                                 field_of_view[1].append(nn.coord)
                             for nnn in nn.adj:
-                                if nnn not in blacklist:
-                                    self.server.env.update_map(key=nnn.id, tile=Tile.VISION)
-                                    field_of_view[2].append(nnn.coord)
-            else:
-                blacklist.append(n)
+                                self.server.env.update_map(key=nnn.id, tile=Tile.VISION)
+                                field_of_view[2].append(nnn.coord)
 
         res = {'res': field_of_view}
         self.wfile.write(bytes(json.dumps(res) + '\n', 'utf-8'))
