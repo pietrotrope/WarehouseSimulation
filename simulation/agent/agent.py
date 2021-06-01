@@ -7,7 +7,6 @@ import socketserver
 import time
 
 from .direction import Direction
-from queue import Queue
 
 from simulation.communication.agent_communication import AgentCommunicationHandler
 
@@ -30,11 +29,11 @@ class Agent(multiprocessing.Process):
         self.has_pod = False
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
-        self.rx_queue = Queue()
+        self.conflicts = {}
         if not os.path.exists('/tmp/agents'):
             os.mkdir('/tmp/agents')
         server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), AgentCommunicationHandler)
-        server.rx_queue = self.rx_queue
+        server.rx_queue = self.conflicts
         server.agent_id = self.id
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()
@@ -87,11 +86,13 @@ class Agent(multiprocessing.Process):
 
     def run(self):
         while True:
-            # TODO: Fetch messages from self.rx_queue
-            # TODO: Do actions based on self.rx_queue messages
-            # TODO: If has_task and has_pod move towards picking_station
-
-            time.sleep(1.0/self.tps)
+            if not self.conflicts:
+                # TODO: Fetch messages from self.rx_queue
+                # TODO: Do actions based on self.rx_queue messages
+                # TODO: If has_task and has_pod move towards picking_station
+                time.sleep(1.0/self.tps)
+            else:
+                pass
 
     def __exit__(self):
         self.talk_to(self.id, json.dumps({'req': 'shutdown'}))

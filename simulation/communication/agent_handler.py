@@ -32,7 +32,7 @@ class AgentHandler(socketserver.StreamRequestHandler):
         node = self.server.env.graph.get_node(self.server.env.raster_to_graph[pos])
         field_of_view = [[], [], []]
         next_block = tuple(map(lambda i, j: i + j, pos, movement[direction]))
-        blacklist = []
+
         for n in node.adj:
             if next_block == n.coord[0]:
                 if n.type == Tile.WALKABLE or n.type == Tile.PICKING_STATION:
@@ -45,8 +45,9 @@ class AgentHandler(socketserver.StreamRequestHandler):
                                 self.server.env.update_map(key=nn.id, tile=Tile.VISION)
                                 field_of_view[1].append(nn.coord)
                             for nnn in nn.adj:
-                                self.server.env.update_map(key=nnn.id, tile=Tile.VISION)
-                                field_of_view[2].append(nnn.coord)
+                                if nnn.type == Tile.WALKABLE or nnn.type == Tile.PICKING_STATION:
+                                    self.server.env.update_map(key=nnn.id, tile=Tile.VISION)
+                                    field_of_view[2].append(nnn.coord)
 
         res = {'res': field_of_view}
         self.wfile.write(bytes(json.dumps(res) + '\n', 'utf-8'))
@@ -54,8 +55,15 @@ class AgentHandler(socketserver.StreamRequestHandler):
     def move(self, msg: dict) -> None:
         direction = Direction(msg['content'])
         agent_id = msg['id']
-        node = self.server.env.graph.get_node(self.server.env.raster_to_graph[
-                                                  self.server.env.agents[agent_id]['Position']])
+        pos = self.server.env.agents[agent_id]['Position']
+        view_range = self.server.env.raster_map[pos[0]-4:pos[0]+4, pos[1]-4:pos[1]+4]
+        start_index = [pos[0]-4, pos[0]+4]
+        end_index = [pos[1]-4, pos[1]+4]
+        for i in range(start_index[0], end_index[0]):
+            for j in range(start_index[1], end_index[1]):
+                self.server.env.update_map(coord=(i, j), type=Tile.WALKABLE)
+
+        node = self.server.env.graph.get_node(self.server.env.raster_to_graph[pos])
         node.agent_id = None
         self.server.env.update_map(coord=self.server.env.agents[agent_id]['Position'], tile=Tile.WALKABLE)
         self.server.env.agents[agent_id]['Position'] = tuple(map(lambda i, j: i + j,
