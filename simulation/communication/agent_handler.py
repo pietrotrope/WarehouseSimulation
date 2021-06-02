@@ -35,19 +35,29 @@ class AgentHandler(socketserver.StreamRequestHandler):
 
         for n in node.adj:
             if next_block == n.coord[0]:
-                if n.type == Tile.WALKABLE or n.type == Tile.PICKING_STATION:
+                if n.type != Tile.POD and n.type != Tile.POD_TAKEN:
                     if n.coord not in [item for sublist in field_of_view for item in sublist]:
-                        self.server.env.update_map(key=n.id, tile=Tile.VISION)
-                        field_of_view[0].append(n.coord)
+                        if n.type == Tile.ROBOT:
+                            field_of_view[0].append({'coord': n.coord, 'agent_id': n.agent_id})
+                        elif n.type != Tile.PICKING_STATION:
+                            self.server.env.update_map(coord=n.coord, tile=Tile.VISION)
                     for nn in n.adj:
-                        if nn.type == Tile.WALKABLE or nn.type == Tile.PICKING_STATION:
+                        if nn.type != Tile.POD and nn.type != Tile.POD_TAKEN:
                             if nn.coord not in [item for sublist in field_of_view for item in sublist]:
                                 self.server.env.update_map(key=nn.id, tile=Tile.VISION)
-                                field_of_view[1].append(nn.coord)
+                                if nn.type == Tile.ROBOT:
+                                    field_of_view[1].append({'coord': nn.coord, 'agent_id': nn.agent_id})
+                                elif nn.type != Tile.PICKING_STATION:
+                                    self.server.env.update_map(coord=nn.coord, tile=Tile.VISION)
                             for nnn in nn.adj:
-                                if nnn.type == Tile.WALKABLE or nnn.type == Tile.PICKING_STATION:
-                                    self.server.env.update_map(key=nnn.id, tile=Tile.VISION)
-                                    field_of_view[2].append(nnn.coord)
+                                if nnn.type != Tile.POD and nnn.type != Tile.POD_TAKEN:
+                                    if nnn.type == Tile.ROBOT:
+                                        field_of_view[2].append({'coord': nnn.coord, 'agent_id': nnn.agent_id})
+                                    elif nn.type != Tile.PICKING_STATION:
+                                        self.server.env.update_map(coord=nnn.coord, tile=Tile.VISION)
+
+        if not [item for sublist in field_of_view for item in sublist]:
+            field_of_view = []
 
         res = {'res': field_of_view}
         self.wfile.write(bytes(json.dumps(res) + '\n', 'utf-8'))
