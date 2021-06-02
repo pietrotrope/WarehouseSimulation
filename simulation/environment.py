@@ -59,7 +59,6 @@ class Environment:
     def __get_picking_stations_number(self):
         picking_stations_columns = np.count_nonzero(self.raster_map == 4, axis=0)
         picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
-        picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
         picking_stations_columns = [[int(y) for y in x.split()] for x in picking_stations_columns.split('0')]
         picking_stations_columns = [x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
@@ -150,10 +149,13 @@ class Environment:
                 sock.sendall(bytes(msg + '\n', 'utf-8'))
                 sock.close()
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect(('localhost', 50666))
-            sock.sendall(b'shutdown')
-            sock.close()
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect(('localhost', 50666))
+                sock.sendall(b'shutdown')
+                sock.close()
+        except OSError:
+            pass
 
         for agent in self.agents.keys():
             if os.path.exists('/tmp/agents/{}'.format(agent)):
