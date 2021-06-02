@@ -66,7 +66,7 @@ class Agent(multiprocessing.Process):
             sock.close()
 
     def watch(self):
-        req = {'req': 'watch', 'id': str(self.id),'content': str(self.direction.value)}
+        req = {'req': 'watch', 'id': str(self.id), 'content': str(self.direction.value)}
         res = self.__communicate_to_env(req)
         self.vision = res['res']
 

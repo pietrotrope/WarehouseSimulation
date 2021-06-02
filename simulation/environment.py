@@ -1,6 +1,7 @@
 import json
 import os
 import socket
+from typing import Tuple
 
 import yaml
 import socketserver
@@ -88,28 +89,28 @@ class Environment:
                        picking_station_number)
         self.graph = Graph(graph_nodes)
 
-        picking_stations = [[] for i in range(picking_station_number)]
-        upper_station = [[] for i in range(picking_station_number)]
+        picking_stations = [[Tuple[int, int]] for _ in range(picking_station_number)]
+        upper_station = [[Tuple[int, int]] for _ in range(picking_station_number)]
         count = -1
         agent_count = 0
 
         for i in range(self.map_shape[0]):
-            current_picking_station = -1
+            current_picking_station: int = -1
             for j in range(self.map_shape[1]):
                 if self.raster_map[i][j] == 4:
                     if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
-                        current_picking_station = current_picking_station + 1
+                        current_picking_station += 1
                         count += 1
-                        upper_station[current_picking_station] = (i, j)
+                        upper_station[current_picking_station, :] = Tuple[i, j]
                         node = self.graph.get_node(count)
                         node.coord = [(i, j)]
                         node.type = Tile(self.raster_map[i][j])
-                        picking_stations[current_picking_station].append((i, j))
+                        picking_stations[current_picking_station].append(Tuple[i, j])
                         self.raster_to_graph[(i, j)] = count
                     elif self.raster_map[i][j - 1] == 0:
                         current_picking_station += 1
                     self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
-                    picking_stations[current_picking_station].append((i, j))
+                    picking_stations[current_picking_station].append(Tuple[i, j])
                 else:
                     if self.raster_map[i][j] == 1:
                         self.agents[agent_count] = (i, j)
