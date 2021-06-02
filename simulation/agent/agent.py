@@ -34,7 +34,7 @@ class Agent(multiprocessing.Process):
         if not os.path.exists('/tmp/agents'):
             os.mkdir('/tmp/agents')
         server = socketserver.ThreadingUnixStreamServer('/tmp/agents/{}'.format(self.id), AgentCommunicationHandler)
-        server.rx_queue = self.conflicts
+        server.conflicts = self.conflicts
         server.agent_id = self.id
         self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
         self.srv.start()

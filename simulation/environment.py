@@ -1,7 +1,6 @@
 import json
 import os
 import socket
-from typing import Tuple
 
 import yaml
 import socketserver
@@ -89,8 +88,8 @@ class Environment:
                        picking_station_number)
         self.graph = Graph(graph_nodes)
 
-        picking_stations = [[Tuple[int, int]] for _ in range(picking_station_number)]
-        upper_station = [[Tuple[int, int]] for _ in range(picking_station_number)]
+        picking_stations = [[] for _ in range(picking_station_number)]
+        upper_station = [(0, 0) for _ in range(picking_station_number)]
         count = -1
         agent_count = 0
 
@@ -101,16 +100,16 @@ class Environment:
                     if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
                         current_picking_station += 1
                         count += 1
-                        upper_station[current_picking_station, :] = Tuple[i, j]
+                        upper_station[current_picking_station] = (i, j)
                         node = self.graph.get_node(count)
                         node.coord = [(i, j)]
                         node.type = Tile(self.raster_map[i][j])
-                        picking_stations[current_picking_station].append(Tuple[i, j])
+                        picking_stations[current_picking_station].append((i, j))
                         self.raster_to_graph[(i, j)] = count
                     elif self.raster_map[i][j - 1] == 0:
                         current_picking_station += 1
                     self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
-                    picking_stations[current_picking_station].append(Tuple[i, j])
+                    picking_stations[current_picking_station].append((i, j))
                 else:
                     if self.raster_map[i][j] == 1:
                         self.agents[agent_count] = (i, j)
