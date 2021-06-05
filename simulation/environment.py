@@ -14,8 +14,8 @@ from simulation.communication.agent_handler import AgentHandler
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from simulation.communication.enviroment_server import EnvironmentToScreenServer
-import multiprocessing as mp
 from multiprocessing import set_start_method
+from threading import Lock
 set_start_method("fork")
 
 
@@ -27,6 +27,7 @@ class Environment:
         self.graph = None
         self.agents = {}
         self.raster_to_graph = {}
+        self.lock = Lock()
         self.__id = 0
         self.__load_map(map_path)
         self.__gen_graph()
@@ -64,15 +65,16 @@ class Environment:
         return len(picking_stations_columns)
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
-        if coord is not None:
-            node = self.graph.get_node(self.raster_to_graph[coord])
-            node.type = tile
-            self.raster_map[coord[0]][coord[1]] = tile.value
-        if key is not None:
-            node = self.graph.get_node(key)
-            node.type = tile
-            x, y = self.key_to_raster(key)[0]
-            self.raster_map[x][y] = tile.value
+        with self.lock:
+            if coord is not None:
+                node = self.graph.get_node(self.raster_to_graph[coord])
+                node.type = tile
+                self.raster_map[coord[0]][coord[1]] = tile.value
+            if key is not None:
+                node = self.graph.get_node(key)
+                node.type = tile
+                x, y = self.key_to_raster(key)[0]
+                self.raster_map[x][y] = tile.value
 
     def __load_map(self, map_path):
         map_path = 'map.csv' if map_path is None else map_path

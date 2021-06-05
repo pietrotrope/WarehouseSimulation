@@ -66,7 +66,6 @@ class AgentHandler(socketserver.StreamRequestHandler):
         direction = Direction(msg['content'])
         agent_id = msg['id']
         pos = self.server.env.agents[agent_id]['Position']
-        view_range = self.server.env.raster_map[pos[0]-4:pos[0]+4, pos[1]-4:pos[1]+4]
         start_index = [pos[0]-4, pos[0]+4]
         end_index = [pos[1]-4, pos[1]+4]
         for i in range(start_index[0], end_index[0]):
