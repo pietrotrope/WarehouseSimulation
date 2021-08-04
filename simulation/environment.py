@@ -10,10 +10,8 @@ import numpy as np
 import threading
 
 from simulation.agent.agent import Agent
-from simulation.communication.agent_handler import AgentHandler
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
-from simulation.communication.enviroment_server import EnvironmentToScreenServer
 from multiprocessing import set_start_method
 from threading import Lock
 set_start_method("fork")
@@ -35,24 +33,6 @@ class Environment:
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
-
-        try:
-            socketserver.ThreadingTCPServer.allow_reuse_address = True
-            server = socketserver.ThreadingTCPServer(('0.0.0.0', 50666), EnvironmentToScreenServer)
-            server.raster_map = self.raster_map
-
-            self.srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
-            self.srv.start()
-
-            agent_server = socketserver.ThreadingUnixStreamServer('/tmp/environment', AgentHandler)
-            agent_server.env = self
-
-            self.agent_handler = threading.Thread(target=agent_server.serve_forever, args=(), daemon=True)
-            self.agent_handler.start()
-        except OSError:
-            self.shutdown()
-            for agent in self.agents.keys():
-                os.remove('/tmp/agents/{}'.format(agent))
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -132,38 +112,5 @@ class Environment:
             node.coord = picking_station
 
     def __spawn_agents(self, cfg_path):
-        positions = self.agents
-        print(positions)
-        self.agents = {}
-
-        for i in range(len(positions)):
-            agent = Agent(i, positions[i])
-
-            self.agents[i] = {'Agent': agent,
-                              'Position': agent.position}
-            agent.start()
-
-    def shutdown(self):
-        if os.path.exists('/tmp/environment'):
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-                sock.connect('/tmp/environment')
-                msg = json.dumps({'req': 'shutdown'})
-                sock.sendall(bytes(msg + '\n', 'utf-8'))
-                sock.close()
-
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect(('localhost', 50666))
-                sock.sendall(b'shutdown')
-                sock.close()
-        except OSError:
-            pass
-
-        for agent in self.agents.keys():
-            if os.path.exists('/tmp/agents/{}'.format(agent)):
-                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-                    sock.connect('/tmp/agents/{}'.format(agent))
-                    msg = json.dumps({'req': 'shutdown'})
-                    sock.sendall(bytes(msg + '\n', 'utf-8'))
-                    sock.close()
-            self.agents[agent]['Agent'].terminate()
+        # TODO: Implement agent spawn
+        pass
