@@ -1,19 +1,11 @@
-import json
-import os
-import socket
-
-import yaml
-import socketserver
-
 import pandas as pd
 import numpy as np
-import threading
 
 from simulation.agent.agent import Agent
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from multiprocessing import set_start_method
-from threading import Lock
+
 set_start_method("fork")
 
 
@@ -25,14 +17,16 @@ class Environment:
         self.graph = None
         self.agents = {}
         self.raster_to_graph = {}
-        self.lock = Lock()
         self.__id = 0
         self.__load_map(map_path)
         self.__gen_graph()
         self.__spawn_agents(cfg_path)
+        self.time = 0
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
+
+        self.run()
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -114,3 +108,40 @@ class Environment:
     def __spawn_agents(self, cfg_path):
         # TODO: Implement agent spawn
         pass
+
+    def run(self):
+        conflicts = []
+        task_ends = []
+        done = [False for _ in range(len(self.agents))]
+        while True:
+            # TODO: Main execution loop
+            for i, agent in enumerate(self.agents):
+                if not agent.route:
+                    done[i] = agent.get_task()
+                    conflicts.append(agent.declare_route())
+                task_ends.append(self.time + len(agent.route))
+
+            if min(conflicts)[0] > min(task_ends):
+                self.time = min(task_ends)
+                task_ends.remove(self.time)
+                for agent in self.agents:
+                    agent.skip_to(self.time)
+                continue
+
+            if conflicts:
+                conflict = min(conflicts)[0]
+                while conflict in list(map(lambda x: x[0], conflicts)):
+                    a = min(conflicts)
+                    # TODO: solve conflict
+                    if a[0] == conflict:
+                        conflicts.remove(a)
+
+                self.time = conflict - 1
+                for agent in self.agents:
+                    agent.skip_to(self.time)
+                continue
+
+            if done.count(True) == len(done):
+                break
+            pass
+
