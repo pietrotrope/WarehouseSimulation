@@ -23,7 +23,12 @@ class Agent:
         self.task = None
 
     def get_task(self):
-        self.task = self.task_handler.get_task(self.id)
+        task = self.task_handler.get_task(self.id)
+        if task == None:
+            return True
+        else:
+            self.task = task
+            return False
 
     def get_priority(self, pos):
         # TODO: return number of remaining steps from current position to destination

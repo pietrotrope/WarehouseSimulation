@@ -23,8 +23,12 @@ class TaskHandler:
 
     def get_task(self, robot_id):
         if self.scheduling is not None:
-            selected_task = self.scheduling[robot_id].pop(0)
+            if not self.scheduling[robot_id]:
+                return None
+            else:
+                selected_task = self.scheduling[robot_id].pop(0)
             return self.task_pool[selected_task]
+            
         else:
             pass
         pass
