@@ -38,6 +38,14 @@ class Environment:
         picking_stations_columns = [x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
+    def get_pods(self):
+        pods = []
+        for i, line in enumerate(self.raster_map):
+            for j, cell in enumerate(line):
+                if cell == Tile.POD:
+                    pods.append((i, j))
+        return pods
+
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
         with self.lock:
             if coord is not None:
