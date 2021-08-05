@@ -22,21 +22,36 @@ class Environment:
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
-        server = socketserver.ThreadingTCPServer(('localhost', 50666), CommunicationHandler)
+        server = socketserver.ThreadingTCPServer(
+            ('localhost', 50666), CommunicationHandler)
         server.raster_map = self.raster_map
-        srv = threading.Thread(target=server.serve_forever, args=(), daemon=True)
+        srv = threading.Thread(
+            target=server.serve_forever, args=(), daemon=True)
         srv.start()
         print('Server listening at localhost:50666')
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
 
+    def get_pods(self):
+        pods = []
+        for i, line in enumerate(self.raster_map):
+            for j, cell in enumerate(line):
+                if cell == Tile.POD.value:
+                    pods.append((i, j))
+        return pods
+
     def get_picking_stations_number(self):
-        picking_stations_columns = np.count_nonzero(self.raster_map == 4, axis=0)
-        picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
-        picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
-        picking_stations_columns = [[int(y) for y in x.split()] for x in picking_stations_columns.split('0')]
-        picking_stations_columns = [x for x in picking_stations_columns if x != []]
+        picking_stations_columns = np.count_nonzero(
+            self.raster_map == 4, axis=0)
+        picking_stations_columns = " {} ".format(
+            " ".join(map(str, picking_stations_columns)))
+        picking_stations_columns = " {} ".format(
+            " ".join(map(str, picking_stations_columns)))
+        picking_stations_columns = [
+            [int(y) for y in x.split()] for x in picking_stations_columns.split('0')]
+        picking_stations_columns = [
+            x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
@@ -57,9 +72,9 @@ class Environment:
 
     def __gen_graph(self):
         graph_nodes = self.map_shape[0] * \
-                      self.map_shape[1] - \
-                      (np.count_nonzero(self.raster_map == 4) -
-                       self.get_picking_stations_number())
+            self.map_shape[1] - \
+            (np.count_nonzero(self.raster_map == 4) -
+             self.get_picking_stations_number())
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[], [], []]
@@ -81,7 +96,8 @@ class Environment:
                         self.raster_to_graph[(i, j)] = count
                     elif self.raster_map[i][j - 1] == 0:
                         picking_station_number += 1
-                    self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[picking_station_number]]
+                    self.raster_to_graph[(
+                        i, j)] = self.raster_to_graph[upper_station[picking_station_number]]
                     picking_stations[picking_station_number].append((i, j))
                 else:
                     count += 1
@@ -97,5 +113,6 @@ class Environment:
                     self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
 
         for picking_station in picking_stations:
-            node = self.graph.get_node(self.raster_to_graph[picking_station[0]])
+            node = self.graph.get_node(
+                self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
