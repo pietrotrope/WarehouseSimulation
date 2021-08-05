@@ -1,3 +1,4 @@
+from numpy.lib.function_base import append
 from simulation.tile import Tile
 import math
 import multiprocessing as mp
@@ -78,26 +79,55 @@ def _singleAstarPP(dic, env, node, node2):
 
 
 def _singleAstarWP(dic, env, node, node2):
-    res = astar(env, node, node2)
+    res = []
     if node.id in dic:
-        dic[node.id][node2.id] = res
+        if node2.id not in dic[node.id]:
+            res = astar(env, node, node2)
+            dic[node.id][node2.id] = res
     else:
+        res = astar(env, node, node2)
         subDic = manager.dict()
         subDic[node2.id] = res
         dic[node.id] = subDic
-    for i in range(len(res)-1):
-        nodeid = res[i]
-        if nodeid in dic:
-            dic[nodeid][node2.id] = res[i+1:]
-        else:
-            subDic = manager.dict()
-            subDic[node2.id] = res[i+1:]
-            dic[nodeid] = subDic
+    if res != []:
+        for i in range(len(res)-1):
+            nodeid = res[i]
+            if nodeid in dic:
+                dic[nodeid][node2.id] = res[i+1:]
+            else:
+                subDic = manager.dict()
+                subDic[node2.id] = res[i+1:]
+                dic[nodeid] = subDic
 
 
 def computeAstarRoutes(env):
     job = []
     astarRoutes = manager.dict()
+
+    pods = []
+    walkables = []
+    picking_stations = []
+
+    for node in env.graph.nodes:
+        if node.type == Tile.POD:
+            pods.append(node)
+        elif node.type == Tile.PICKING_STATION:
+            picking_stations.append(node)
+        else:
+            walkables.append(node)
+    
+    for node in walkables:
+        for node2 in pods:
+            job.append((astarRoutes, env, node, node2))
+    for node in picking_stations:
+        for node2 in pods:
+            job.append((astarRoutes, env, node, node2))
+    for node in pods:
+        for neighbour in node.adj:
+            if neighbour.type == Tile.WALKABLE:
+                for picking_station in picking_stations:
+                    job.append((astarRoutes, env, neighbour, picking_station))
+    """
     for node in env.graph.nodes:
         if node.type == Tile.POD:
             for node2 in env.graph.nodes:
@@ -107,6 +137,7 @@ def computeAstarRoutes(env):
             for node2 in env.graph.nodes:
                 if node2.type == Tile.POD:
                     job.append((astarRoutes, env, node, node2))
+    """
     tot = len(job)
     perc = 0
     while(job != []):
