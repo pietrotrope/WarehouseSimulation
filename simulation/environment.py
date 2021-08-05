@@ -1,4 +1,3 @@
-from hashlib import new
 import pandas as pd
 import numpy as np
 
@@ -12,7 +11,7 @@ set_start_method("fork")
 
 
 class Environment:
-    #n: number of tasks
+    # n: number of tasks
     def __init__(self, map_path=None, cfg_path='../config.yaml', n=50, scheduling=None):
         self.scheduling = [] if scheduling is None else scheduling
         self.raster_map = None
@@ -77,8 +76,8 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-            (np.count_nonzero(self.raster_map == 4) -
-             picking_station_number)
+                      (np.count_nonzero(self.raster_map == 4) -
+                       picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -141,7 +140,7 @@ class Environment:
                     done[i] = agent.get_task()
                     new_conflict = agent.declare_route()
                     if new_conflict is not None:
-                        conflicts.append()
+                        conflicts.append(new_conflict)
                 task_ends.append(self.time + len(agent.route))
 
             if min(conflicts)[0] > min(task_ends):
@@ -161,8 +160,7 @@ class Environment:
                 while conflict_time in list(map(lambda x: x[0], conflicts)):
                     first_conflict = min(conflicts)
                     if first_conflict[0] == conflict_time:
-                        conflicts = conflicts + \
-                            self.solve_conflict(first_conflict)
+                        conflicts = conflicts + self.solve_conflict(first_conflict)
                         conflicts.remove(first_conflict)
                 continue
 
@@ -181,25 +179,23 @@ class Environment:
         new_conflicts = []
 
         if len(priorities) == 2:
-            priority_agent = max(priorities)(1)
+            priority_agent = max(priorities)[1]
             for agent in agents:
                 if agent is not priority_agent:
-                    overlap_path_agents = self.raster_map[self.agents[agent].route[0]
-                                                          ].timestamp[time+1]
+                    overlap_path_agents = self.raster_map[self.agents[agent].route[0]].timestamp[time + 1]
 
                     new_c = self.agents[agent].shift_route(
                         1, overlap_path_agents.contains(priority_agent))
-                    if new_c != None:
+                    if new_c is not None:
                         new_conflicts.append(new_c)
 
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
-                overlap_path_agents = self.raster_map[self.agents[agent].route[0]
-                                                      ].timestamp[time+1]
+                overlap_path_agents = self.raster_map[self.agents[agent].route[0]].timestamp[time + 1]
                 new_c = self.agents[agent].shift_route(
                     i, bool(set(agents).intersection(set(overlap_path_agents))))
-                if new_c != None:
+                if new_c is not None:
                     new_conflicts.append(new_c)
 
         return new_conflicts
