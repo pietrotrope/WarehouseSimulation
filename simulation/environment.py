@@ -1,3 +1,4 @@
+from hashlib import new
 import pandas as pd
 import numpy as np
 
@@ -26,16 +27,20 @@ class Environment:
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
-        self.run()
+        #self.run()
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
 
     def __get_picking_stations_number(self):
-        picking_stations_columns = np.count_nonzero(self.raster_map == 4, axis=0)
-        picking_stations_columns = " {} ".format(" ".join(map(str, picking_stations_columns)))
-        picking_stations_columns = [[int(y) for y in x.split()] for x in picking_stations_columns.split('0')]
-        picking_stations_columns = [x for x in picking_stations_columns if x != []]
+        picking_stations_columns = np.count_nonzero(
+            self.raster_map == 4, axis=0)
+        picking_stations_columns = " {} ".format(
+            " ".join(map(str, picking_stations_columns)))
+        picking_stations_columns = [
+            [int(y) for y in x.split()] for x in picking_stations_columns.split('0')]
+        picking_stations_columns = [
+            x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
     def get_pods(self):
@@ -67,8 +72,8 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-                      (np.count_nonzero(self.raster_map == 4) -
-                       picking_station_number)
+            (np.count_nonzero(self.raster_map == 4) -
+             picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -87,11 +92,13 @@ class Environment:
                         node = self.graph.get_node(count)
                         node.coord = [(i, j)]
                         node.type = Tile(self.raster_map[i][j])
-                        picking_stations[current_picking_station].append((i, j))
+                        picking_stations[current_picking_station].append(
+                            (i, j))
                         self.raster_to_graph[(i, j)] = count
                     elif self.raster_map[i][j - 1] == 0:
                         current_picking_station += 1
-                    self.raster_to_graph[(i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
+                    self.raster_to_graph[(
+                        i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
                     picking_stations[current_picking_station].append((i, j))
                 else:
                     if self.raster_map[i][j] == 1:
@@ -110,7 +117,8 @@ class Environment:
                     self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
 
         for picking_station in picking_stations:
-            node = self.graph.get_node(self.raster_to_graph[picking_station[0]])
+            node = self.graph.get_node(
+                self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
 
     def __spawn_agents(self, cfg_path):
@@ -126,7 +134,9 @@ class Environment:
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
-                    conflicts.append(agent.declare_route())
+                    new_conflict = agent.declare_route()
+                    if new_conflict is not None:
+                        conflicts.append()
                 task_ends.append(self.time + len(agent.route))
 
             if min(conflicts)[0] > min(task_ends):
@@ -137,19 +147,54 @@ class Environment:
                 continue
 
             if conflicts:
-                conflict = min(conflicts)[0]
-                while conflict in list(map(lambda x: x[0], conflicts)):
-                    a = min(conflicts)
-                    # TODO: solve conflict
-                    if a[0] == conflict:
-                        conflicts.remove(a)
+                conflict_time = min(conflicts)[0]
 
-                self.time = conflict - 1
+                self.time = conflict_time - 1
                 for agent in self.agents:
                     agent.skip_to(self.time)
+
+                while conflict_time in list(map(lambda x: x[0], conflicts)):
+                    first_conflict = min(conflicts)
+                    if first_conflict[0] == conflict_time:
+                        conflicts = conflicts + \
+                            self.solve_conflict(first_conflict)
+                        conflicts.remove(first_conflict)
                 continue
 
             if done.count(True) == len(done):
                 break
             pass
 
+    def solve_conflict(self, conflict):
+        time, pos = conflict
+        agents = self.raster_map[pos].timestamp[time]
+
+        priorities = []
+        for agent in agents:
+            priorities.append((self.agents[agent].get_priority(), agent))
+
+        new_conflicts = []
+
+        if len(priorities) == 2:
+            priority_agent = max(priorities)(1)
+            for agent in agents:
+                if agent is not priority_agent:
+                    overlap_path_agents = self.raster_map[self.agents[agent].route[0]
+                                                          ].timestamp[time+1]
+
+                    new_c = self.agents[agent].shift_route(
+                        1, overlap_path_agents.contains(priority_agent))
+                    if new_c != None:
+                        new_conflicts.append(new_c)
+
+        elif len(priorities) > 2:
+            priorities.sort(reverse=True)
+            for i, agent in enumerate(priorities):
+                overlap_path_agents = self.raster_map[self.agents[agent].route[0]
+                                                      ].timestamp[time+1]
+                new_c = self.agents[agent].shift_route(
+                    i, bool(set(agents).intersection(set(overlap_path_agents))))
+                if new_c != None:
+                    new_conflicts.append(new_c)
+
+        return new_conflicts
