@@ -17,6 +17,8 @@ class GA:
     # pmutation: mutation rate
     # pselection: selection rate
 
+    #n: task number
+    #m: bot number
     def __init__(self, seed, simulation, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2,
                  n=50,
                  m=8):
@@ -32,10 +34,9 @@ class GA:
         self.simulation = simulation
 
     def __fitness(self, chromosome):
-        assignments = self.chromosome_to_schedule(chromosome)
+        scheduling = self.chromosome_to_schedule(chromosome)
 
-        # results should be an array in the form [TT, TTC, BU]
-        TT, TTC, BU = self.simulation(assignments)
+        TT, TTC, BU = self.simulation(scheduling)
 
         maxtest = max([len(assignments[i]) for i in range(self.m)])
         totaltest = self.n
@@ -77,7 +78,6 @@ class GA:
         remaining = remaining.iloc[:, 0:lastcol]
         for i in range(len(remaining)):
             r = np.random.rand()
-            #ricerca binaria
             for j in range(len(cumsum)):
                 if r <= cumsum[j]:
                     selectedremaining[i] = j

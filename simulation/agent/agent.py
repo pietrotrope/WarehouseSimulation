@@ -13,15 +13,17 @@ movement = {
 
 class Agent:
 
-    def __init__(self, agent_id, position, route, env, direction=Direction.DOWN):
+    def __init__(self, agent_id, position, route, env, direction=Direction.DOWN, task_handler=None):
         self.id = agent_id
         self.position = position
         self.direction = direction
         self.route = route
         self.env = env
+        self.task_handler = task_handler
+        self.task = None
 
     def get_task(self):
-        pass
+        self.task = self.task_handler.get_task(self.id)
 
     def get_priority(self, pos):
         # TODO: return number of remaining steps from current position to destination
