@@ -11,8 +11,8 @@ set_start_method("fork")
 
 
 class Environment:
-
-    def __init__(self, map_path=None, cfg_path='../config.yaml', scheduling=None):
+    #n: number of tasks
+    def __init__(self, map_path=None, cfg_path='../config.yaml', n=50, scheduling=None):
         self.scheduling = [] if scheduling is None else scheduling
         self.raster_map = None
         self.map_shape = ()
@@ -25,11 +25,11 @@ class Environment:
         self.__spawn_agents(cfg_path)
         self.time = 0
         self.task_pool = {}
+        self.n = n
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
-        # settare il task_pool
-        self.task_handler = self.task_handler(self, self.task_pool)
+        self.task_handler = self.task_handler(self, n)
 
         self.run()
 
