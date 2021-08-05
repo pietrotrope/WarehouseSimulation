@@ -38,7 +38,7 @@ class GA:
 
         TT, TTC, BU = self.simulation(scheduling)
 
-        maxtest = max([len(assignments[i]) for i in range(self.m)])
+        maxtest = max([len(scheduling[i]) for i in range(self.m)])
         totaltest = self.n
         Fx = maxtest / TT + totaltest / TTC + BU
 
