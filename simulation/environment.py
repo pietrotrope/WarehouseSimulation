@@ -42,7 +42,7 @@ class Environment:
         pods = []
         for i, line in enumerate(self.raster_map):
             for j, cell in enumerate(line):
-                if cell == Tile.POD:
+                if cell == Tile.POD.value:
                     pods.append((i, j))
         return pods
 
