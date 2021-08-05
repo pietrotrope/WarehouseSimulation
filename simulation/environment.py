@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 
 from simulation.agent.agent import Agent
+from simulation.agent.task_handler import TaskHandler
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from multiprocessing import set_start_method
@@ -11,7 +12,8 @@ set_start_method("fork")
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml'):
+    def __init__(self, map_path=None, cfg_path='../config.yaml', scheduling=None):
+        self.scheduling = [] if scheduling is None else scheduling
         self.raster_map = None
         self.map_shape = ()
         self.graph = None
@@ -22,9 +24,12 @@ class Environment:
         self.__gen_graph()
         self.__spawn_agents(cfg_path)
         self.time = 0
-
+        self.task_pool = {}
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
+
+        # settare il task_pool
+        self.task_handler = self.task_handler(self, self.task_pool)
 
         self.run()
 
@@ -117,7 +122,7 @@ class Environment:
         # TODO: Implement agent spawn
         pass
 
-    def run(self):
+    def run(self, scheduling):
         conflicts = []
         task_ends = []
         done = [False for _ in range(len(self.agents))]
@@ -152,4 +157,4 @@ class Environment:
             if done.count(True) == len(done):
                 break
             pass
-
+    # servono i tre costi
