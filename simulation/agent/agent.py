@@ -33,7 +33,7 @@ class Agent:
             return False
 
     def declare_route(self):
-        conflict = None
+        conflict = []
         for i in range(len(self.route)):
             x, y = self.route[i]
             if self.env.raster_map[x][y].timestamp[i + self.env.time]:
@@ -44,17 +44,17 @@ class Agent:
                                                     self.env.time] = [self.id]
 
             if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1 and conflict is None:
-                conflict = (i + self.env.time, (x, y))
+                conflict.append((i + self.env.time, (x, y)))
 
-            #TODO Trovato problema (se due che hanno priorità hanno + errori sul cammino)
-
+            for other_agent in self.env.raster_map[x][y].timestamp[i + self.env.time - 1]:
+                if other_agent.route[i + self.env.time] == (x, y):
+                    conflict.append((i + self.env.time, (x, y)))
         return conflict
 
     def get_priority(self):
         return random.random()
 
     def shift_route(self, shift, bad_conflict):
-        #TODO NUOVO PROBLEMA SUI TIPI DI CONFLITTI, Se non finiscono nella stessa cella ma si sovrappongono i cammini
         if bad_conflict:
 
             if self.direction.value[0] == 0:  # Going up or down
