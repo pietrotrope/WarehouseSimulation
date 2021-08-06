@@ -34,7 +34,7 @@ class Agent:
             return False
 
     def declare_route(self):
-        conflict = []
+        conflicts = []
         for i in range(len(self.route)):
             x, y = self.route[i]
             if self.env.raster_map[x][y].timestamp[i + self.env.time]:
@@ -45,12 +45,12 @@ class Agent:
                                                     self.env.time] = [self.id]
 
             if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1:
-                conflict.append((i + self.env.time, (x, y)))
+                conflicts.append((i + self.env.time, (x, y)))
 
             for other_agent in self.env.raster_map[x][y].timestamp[i + self.env.time - 1]:
                 if other_agent.route[i + self.env.time] == (x, y):
-                    conflict.append((i + self.env.time, (x, y)))
-        return conflict
+                    conflicts.append((i + self.env.time, (x, y)))
+        return conflicts
 
     @staticmethod
     def get_priority():
