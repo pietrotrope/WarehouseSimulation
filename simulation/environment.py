@@ -12,8 +12,8 @@ set_start_method("fork")
 
 
 class Environment:
-    # n: number of tasks
-    def __init__(self, map_path=None, cfg_path='../config.yaml', n=50, scheduling=None, save=False):
+
+    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None, save=False):
         self.scheduling = [] if scheduling is None else scheduling
         self.raster_map = None
         self.tile_map = None
@@ -27,12 +27,14 @@ class Environment:
         self.__spawn_agents(cfg_path)
         self.time = 0
         self.task_pool = {}
-        self.n = n
+        self.task_number = task_number
+        self.agent_number = agent_number
         self.save = save
+
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
-        self.task_handler = self.task_handler(self, n)
+        self.task_handler = self.task_handler(self, task_number)
 
         self.run()
 
@@ -136,8 +138,13 @@ class Environment:
                 self.tile_map[i][j] = Cell(Tile(cell))
 
     def __spawn_agents(self, cfg_path):
-        # TODO: Implement agent spawn
-        pass
+        positions = self.agents
+        self.agents = []
+
+        for i in range(len(positions)):
+            agent = Agent(i, positions[i], self)
+
+            self.agents.append(agent)
 
     def run(self):
         conflicts = []

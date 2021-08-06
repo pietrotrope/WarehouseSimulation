@@ -1,4 +1,3 @@
-import multiprocessing
 from simulation.tile import Tile
 from .direction import Direction
 import random
@@ -13,7 +12,9 @@ movement = {
 
 class Agent:
 
-    def __init__(self, agent_id, position, route, env, direction=Direction.DOWN, task_handler=None):
+    def __init__(self, agent_id, position, env, route=None, direction=Direction.DOWN, task_handler=None):
+        if route is None:
+            route = []
         self.id = agent_id
         self.position = position
         self.direction = direction
@@ -43,7 +44,7 @@ class Agent:
                 self.env.raster_map[x][y].timestamp[i +
                                                     self.env.time] = [self.id]
 
-            if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1 and conflict is None:
+            if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1:
                 conflict.append((i + self.env.time, (x, y)))
 
             for other_agent in self.env.raster_map[x][y].timestamp[i + self.env.time - 1]:
@@ -51,7 +52,8 @@ class Agent:
                     conflict.append((i + self.env.time, (x, y)))
         return conflict
 
-    def get_priority(self):
+    @staticmethod
+    def get_priority():
         return random.random()
 
     def shift_route(self, shift, bad_conflict):
