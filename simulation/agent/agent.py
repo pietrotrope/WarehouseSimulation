@@ -21,6 +21,7 @@ class Agent:
         self.env = env
         self.task_handler = task_handler
         self.task = None
+        self.log = []
 
     def get_task(self):
         task = self.task_handler.get_task(self.id)
@@ -104,6 +105,7 @@ class Agent:
         return self.declare_route()
 
     def skip_to(self, t):
+        self.log = self.log + self.route[0:t]
         self.position = self.route[t-self.time]
         self.route = self.route[t-self.time:len(self.route)]
         self.direction = Direction(self.route[0] - self.route[1])
