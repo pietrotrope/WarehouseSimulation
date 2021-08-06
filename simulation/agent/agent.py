@@ -1,4 +1,3 @@
-import multiprocessing
 from simulation.tile import Tile
 from .direction import Direction
 import random
@@ -13,7 +12,9 @@ movement = {
 
 class Agent:
 
-    def __init__(self, agent_id, position, route, env, direction=Direction.DOWN, task_handler=None):
+    def __init__(self, agent_id, position, env, route=None, direction=Direction.DOWN, task_handler=None):
+        if route is None:
+            route = []
         self.id = agent_id
         self.position = position
         self.direction = direction
@@ -30,10 +31,17 @@ class Agent:
             return True
         else:
             self.task = task
+            id_robot = self.env.raster_to_graph[self.position]
+            id_pod = self.env.raster_to_graph[task]
+            route_to_pod = self.env.routes[id_robot][id_pod]
+            route = route_to_pod
+            route_to_ps = self.env.routes[route_to_pod[-1]]
+            route = route + route_to_ps + route_to_pod.reverse()
+            self.route = list(map(self.env.key_to_raster, route))
             return False
 
     def declare_route(self):
-        conflict = []
+        conflicts = []
         for i in range(len(self.route)):
             x, y = self.route[i]
             if self.env.raster_map[x][y].timestamp[i + self.env.time]:
@@ -43,15 +51,16 @@ class Agent:
                 self.env.raster_map[x][y].timestamp[i +
                                                     self.env.time] = [self.id]
 
-            if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1 and conflict is None:
-                conflict.append((i + self.env.time, (x, y)))
+            if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1:
+                conflicts.append((i + self.env.time, (x, y)))
 
             for other_agent in self.env.raster_map[x][y].timestamp[i + self.env.time - 1]:
                 if other_agent.route[i + self.env.time] == (x, y):
-                    conflict.append((i + self.env.time, (x, y)))
-        return conflict
+                    conflicts.append((i + self.env.time, (x, y)))
+        return conflicts
 
-    def get_priority(self):
+    @staticmethod
+    def get_priority():
         return random.random()
 
     def shift_route(self, shift, bad_conflict):
