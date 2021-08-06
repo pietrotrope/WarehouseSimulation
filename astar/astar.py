@@ -91,7 +91,8 @@ def _singleAstarWP(dic, env, node, node2):
         for i in range(len(res) - 1):
             nodeid = res[i]
             if nodeid in dic:
-                dic[nodeid][node2.id] = res[i + 1:]
+                if node2.id not in dic[nodeid]:
+                    dic[nodeid][node2.id] = res[i + 1:]
             else:
                 subDic = manager.dict()
                 subDic[node2.id] = res[i + 1:]
@@ -117,31 +118,24 @@ def computeAstarRoutes(env):
     for node in walkables:
         for node2 in pods:
             job.append((astarRoutes, env, node, node2))
+
     for node in picking_stations:
         for node2 in pods:
-            job.append((astarRoutes, env, node, node2))
+            job.append((astarRoutes, env, node2, node))
+
     for node in pods:
         for neighbour in node.adj:
             if neighbour.type == Tile.WALKABLE:
                 for picking_station in picking_stations:
                     job.append((astarRoutes, env, neighbour, picking_station))
-    """
-    for node in env.graph.nodes:
-        if node.type == Tile.POD:
-            for node2 in env.graph.nodes:
-                if node2.type == Tile.PICKING_STATION:
-                    job.append((astarRoutes, env, node, node2))
-        if node.type == Tile.WALKABLE or node.type == Tile.ROBOT:
-            for node2 in env.graph.nodes:
-                if node2.type == Tile.POD:
-                    job.append((astarRoutes, env, node, node2))
-    """
+
     tot = len(job)
+    print(tot)
     perc = 0
     while (job != []):
         tmp = []
         x = 0
-        while (job != [] and len(tmp) < 10):
+        while (job != [] and len(tmp) < 12):
             newJob = job.pop(0)
             done = False
             if newJob[2].id in astarRoutes:
@@ -152,6 +146,20 @@ def computeAstarRoutes(env):
                     tmp.append(mp.Process(target=_singleAstarPP, args=newJob))
                 else:
                     tmp.append(mp.Process(target=_singleAstarWP, args=newJob))
+
+            if job != []:
+                newJob = job.pop(len(job)-1)
+                done = False
+                if newJob[2].id in astarRoutes:
+                    if newJob[3].id in astarRoutes[newJob[2].id]:
+                        done = True
+                if not done:
+                    if newJob[2].type == Tile.POD:
+                        tmp.append(mp.Process(
+                            target=_singleAstarPP, args=newJob))
+                    else:
+                        tmp.append(mp.Process(
+                            target=_singleAstarWP, args=newJob))
 
         _ = [p.start() for p in tmp]
         _ = [p.join() for p in tmp]

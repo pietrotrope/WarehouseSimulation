@@ -36,28 +36,32 @@ class Agent:
             id_pod = self.env.raster_to_graph[task]
             route_to_pod = self.env.routes[str(id_robot)][str(id_pod)]
             route = route_to_pod
-            route_to_ps = self.env.routes[str(route_to_pod[-1])]
-            route += route_to_ps + route_to_pod.reverse()
-            self.route = list(map(self.env.key_to_raster, route))
+            route_to_ps = self.env.routes[str(id_pod)]
+            route = route + route_to_ps
+            route_to_ps.reverse()
+            route = route + route_to_ps
+            self.route = [self.env.key_to_raster(cell)[0] for cell in route]
+            # list(map(self.env.key_to_raster, route))
             return False
 
     def declare_route(self):
         conflicts = []
         for i in range(len(self.route)):
             x, y = self.route[i]
-            if self.env.raster_map[x][y].timestamp[i + self.env.time]:
-                self.env.raster_map[x][y].timestamp[i +
-                                                    self.env.time].append(self.id)
+            if (i + self.env.time) in self.env.tile_map[x][y].timestamp:
+                self.env.tile_map[x][y].timestamp[i +
+                                                  self.env.time].append(self.id)
             else:
-                self.env.raster_map[x][y].timestamp[i +
-                                                    self.env.time] = [self.id]
+                self.env.tile_map[x][y].timestamp[i +
+                                                  self.env.time] = [self.id]
 
-            if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1:
+            if len(self.env.tile_map[x][y].timestamp[i + self.env.time]) > 1:
                 conflicts.append((i + self.env.time, (x, y)))
 
-            for other_agent in self.env.raster_map[x][y].timestamp[i + self.env.time - 1]:
-                if other_agent.route[i + self.env.time] == (x, y):
-                    conflicts.append((i + self.env.time, (x, y)))
+            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp:
+                for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
+                    if self.env.agents[other_agent].route[self.env.agents[other_agent].time - self.env.time + i] == (x, y):
+                        conflicts.append((i + self.env.time, (x, y)))
         return conflicts
 
     @staticmethod
@@ -65,60 +69,71 @@ class Agent:
         return random.random()
 
     def shift_route(self, shift, bad_conflict):
+
         if bad_conflict:
 
-            if self.direction.value[0] == 0:  # Going up or down
-                tile_left = self.env.tile_map[(self.position - (1, 0))]
-                tile_right = self.env.tile_map[(self.position + (1, 0))]
+            if self.direction[0] == 0:  # Going up or down
+                tile_left = self.env.tile_map[self.position[0] -
+                                              1][self.position[1]]
+                tile_right = self.env.tile_map[self.position[0] +
+                                               1][self.position[1]]
 
                 if tile_left.tile != Tile.WALKABLE and tile_left.tile != Tile.ROBOT:
-                    self.invalidate_and_declare_route(
-                        [self.position + (1, 0), self.position])
+                    return self.invalidate_and_declare_route(
+                        [(self.position[0]+1, self.position[1]), self.position])
                 elif tile_right.tile != Tile.WALKABLE and tile_right.tile != Tile.ROBOT:
-                    self.invalidate_and_declare_route(
-                        [self.position - (1, 0), self.position])
+                    return self.invalidate_and_declare_route(
+                        [(self.position[0]-1, self.position[1]), self.position])
                 else:
                     if random.random() < 0.5:
-                        self.invalidate_and_declare_route(
-                            [self.position + (1, 0), self.position])
+                        return self.invalidate_and_declare_route(
+                            [(self.position[0]+1, self.position[1]), self.position])
                     else:
-                        self.invalidate_and_declare_route(
-                            [self.position - (1, 0), self.position])
+                        return self.invalidate_and_declare_route(
+                            [(self.position[0]-1, self.position[1]), self.position])
             else:
 
-                tile_down = self.env.tile_map[(self.position - (0, 1))]
-                tile_up = self.env.tile_map[(self.position + (0, 1))]
+                tile_down = self.env.tile_map[self.position[0]
+                                              ][self.position[1] - 1]
+                tile_up = self.env.tile_map[self.position[0]
+                                            ][self.position[1]+1]
 
                 if tile_down.tile != Tile.WALKABLE and tile_down.tile != Tile.ROBOT:
-                    self.invalidate_and_declare_route(
-                        [self.position + (0, 1), self.position])
+                    return self.invalidate_and_declare_route(
+                        [(self.position[0], self.position[1]+1), self.position])
                 elif tile_up.tile != Tile.WALKABLE and tile_up.tile != Tile.ROBOT:
-                    self.invalidate_and_declare_route(
-                        [self.position - (0, 1), self.position])
+                    return self.invalidate_and_declare_route(
+                        [(self.position[0], self.position[1]-1), self.position])
                 else:
                     if random.random() < 0.5:
-                        self.invalidate_and_declare_route(
-                            [self.position + (0, 1), self.position])
+                        return self.invalidate_and_declare_route(
+                            [(self.position[0], self.position[1]+1), self.position])
                     else:
-                        self.invalidate_and_declare_route(
-                            [self.position - (0, 1), self.position])
+                        return self.invalidate_and_declare_route(
+                            [(self.position[0], self.position[1]-1), self.position])
 
         else:
+
             steps = [self.route[0]]*shift
             return self.invalidate_and_declare_route(steps)
 
     def invalidate_and_declare_route(self, steps):
+
         t = self.env.time
         for i, pos in enumerate(self.route):
-            self.env.tile_map[pos].timestamp[i+t].remove(self.id)
+            self.env.tile_map[pos[0]][pos[1]].timestamp[i+t-1].remove(self.id)
         self.route = steps+self.route
         return self.declare_route()
 
     def skip_to(self, t):
         if self.route:
             self.log = self.log + self.route[0:t]
-            self.position = self.route[t-self.time]
-            self.route = self.route[t-self.time:len(self.route)]
-            self.direction = Direction(self.route[0] - self.route[1])
+            self.position = self.route[t-self.time - 1]
+            self.route = self.route[t-self.time - 1:len(self.route)]
+            if len(self.route) > 1:
+                self.direction = (
+                    self.route[0][0] - self.route[1][0], self.route[0][1] - self.route[0][1])
+            else:
+                self.direction = (0, 0)
         self.time = t
         pass
