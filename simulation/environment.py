@@ -13,7 +13,7 @@ set_start_method("fork")
 
 class Environment:
     # n: number of tasks
-    def __init__(self, map_path=None, cfg_path='../config.yaml', n=50, scheduling=None):
+    def __init__(self, map_path=None, cfg_path='../config.yaml', n=50, scheduling=None, save=False):
         self.scheduling = [] if scheduling is None else scheduling
         self.raster_map = None
         self.tile_map = None
@@ -28,6 +28,7 @@ class Environment:
         self.time = 0
         self.task_pool = {}
         self.n = n
+        self.save = save
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
 
@@ -79,8 +80,8 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-                      (np.count_nonzero(self.raster_map == 4) -
-                       picking_station_number)
+            (np.count_nonzero(self.raster_map == 4) -
+             picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -134,12 +135,11 @@ class Environment:
             for j, cell in enumerate(row):
                 self.tile_map[i][j] = Cell(Tile(cell))
 
-
     def __spawn_agents(self, cfg_path):
         # TODO: Implement agent spawn
         pass
 
-    def run(self, save = False):
+    def run(self):
         conflicts = []
         task_ends = []
         done = [False for _ in range(len(self.agents))]
@@ -148,9 +148,7 @@ class Environment:
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
-                    new_conflict = agent.declare_route()
-                    if new_conflict is not None:
-                        conflicts.append(new_conflict)
+                    conflicts = conflicts + agent.declare_route()
                 task_ends.append(self.time + len(agent.route))
 
             if min(conflicts)[0] > min(task_ends):
@@ -170,18 +168,19 @@ class Environment:
                 while conflict_time in list(map(lambda x: x[0], conflicts)):
                     first_conflict = min(conflicts)
                     if first_conflict[0] == conflict_time:
-                        conflicts = conflicts + self.solve_conflict(first_conflict)
+                        conflicts = conflicts + \
+                            self.solve_conflict(first_conflict)
                         conflicts.remove(first_conflict)
                 continue
 
             if done.count(True) == len(done):
-                if save:
+                if self.save:
                     self.save_data()
-
                 break
             pass
-    
+
     def save_data(self):
+
         pass
 
     def solve_conflict(self, conflict):
@@ -198,20 +197,18 @@ class Environment:
             priority_agent = max(priorities)[1]
             for agent in agents:
                 if agent is not priority_agent:
-                    overlap_path_agents = self.tile_map[self.agents[agent].route[0]].timestamp[time + 1]
+                    overlap_path_agents = self.tile_map[self.agents[agent].route[0]
+                                                        ].timestamp[time + 1]
 
-                    new_c = self.agents[agent].shift_route(
+                    new_conflicts = new_conflicts + self.agents[agent].shift_route(
                         1, overlap_path_agents.contains(priority_agent))
-                    if new_c is not None:
-                        new_conflicts.append(new_c)
 
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
-                overlap_path_agents = self.tile_map[self.agents[agent].route[0]].timestamp[time + 1]
-                new_c = self.agents[agent].shift_route(
+                overlap_path_agents = self.tile_map[self.agents[agent].route[0]
+                                                    ].timestamp[time + 1]
+                new_conflicts = new_conflicts + self.agents[agent].shift_route(
                     i, bool(set(agents).intersection(set(overlap_path_agents))))
-                if new_c is not None:
-                    new_conflicts.append(new_c)
 
         return new_conflicts
