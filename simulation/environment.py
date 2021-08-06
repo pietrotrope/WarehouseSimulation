@@ -151,7 +151,6 @@ class Environment:
         task_ends = []
         done = [False for _ in range(len(self.agents))]
         while True:
-            # TODO: Main execution loop
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
@@ -201,7 +200,7 @@ class Environment:
                 if other_agent.route[time-self.time+1] == pos:
                     new_agents.append(other_agent)
 
-        #Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
+        #TODO Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
 
         priorities = []
         for agent in agents:
