@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import csv
+import json
 
 from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
@@ -12,7 +13,7 @@ from simulation.graph.graph import Graph
 class Environment:
 
     def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None, save=False):
-        self.scheduling = [] if scheduling is None else scheduling
+        self.scheduling = scheduling
         self.raster_map = None
         self.tile_map = None
         self.map_shape = ()
@@ -23,7 +24,6 @@ class Environment:
         self.__load_map(map_path)
         self.__gen_graph()
         self.task_handler = TaskHandler(self, 10)
-        self.task_handler.gen_schedule()
         self.__spawn_agents(cfg_path)
         self.time = 0
         self.task_pool = {}
@@ -33,6 +33,9 @@ class Environment:
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
+
+        with open('astar/astarRoutes.json', 'r') as f:
+            self.routes = json.load(f)
 
         self.run()
 
@@ -153,6 +156,7 @@ class Environment:
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
+                    print(agent.route)
                     if done[i]:
                         agent.position = agent.home
                     conflicts = conflicts + agent.declare_route()
