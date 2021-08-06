@@ -34,9 +34,9 @@ class Agent:
             self.task = task
             id_robot = self.env.raster_to_graph[self.position]
             id_pod = self.env.raster_to_graph[task]
-            route_to_pod = self.env.routes[id_robot][id_pod]
+            route_to_pod = self.env.routes[str(id_robot)][str(id_pod)]
             route = route_to_pod
-            route_to_ps = self.env.routes[route_to_pod[-1]]
+            route_to_ps = self.env.routes[str(route_to_pod[-1])]
             route += route_to_ps + route_to_pod.reverse()
             self.route = list(map(self.env.key_to_raster, route))
             return False
