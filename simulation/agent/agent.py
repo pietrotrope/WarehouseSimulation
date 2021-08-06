@@ -17,6 +17,7 @@ class Agent:
             route = []
         self.id = agent_id
         self.position = position
+        self.home = position
         self.direction = direction
         self.route = route
         self.env = env
