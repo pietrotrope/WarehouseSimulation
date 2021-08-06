@@ -36,7 +36,7 @@ class Agent:
             route_to_pod = self.env.routes[id_robot][id_pod]
             route = route_to_pod
             route_to_ps = self.env.routes[route_to_pod[-1]]
-            route = route + route_to_ps + route_to_pod.reverse()
+            route += route_to_ps + route_to_pod.reverse()
             self.route = list(map(self.env.key_to_raster, route))
             return False
 
@@ -114,9 +114,10 @@ class Agent:
         return self.declare_route()
 
     def skip_to(self, t):
-        self.log = self.log + self.route[0:t]
-        self.position = self.route[t-self.time]
-        self.route = self.route[t-self.time:len(self.route)]
-        self.direction = Direction(self.route[0] - self.route[1])
+        if self.route:
+            self.log = self.log + self.route[0:t]
+            self.position = self.route[t-self.time]
+            self.route = self.route[t-self.time:len(self.route)]
+            self.direction = Direction(self.route[0] - self.route[1])
         self.time = t
         pass
