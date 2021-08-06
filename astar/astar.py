@@ -70,7 +70,7 @@ def _singleAstarPP(dic, env, node, node2):
         if len(res) < len(dic[node.id]):
             dic[node.id] = res
     else:
-        dic[node.id] = {node2.id: res}
+        dic[node.id] = res
 
 
 def _singleAstarWP(dic, env, node, node2):
