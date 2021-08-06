@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import csv
 
 from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
@@ -186,21 +187,26 @@ class Environment:
             pass
 
     def save_data(self):
+        res = []
+        for agent in self.agents:
+            res.append(agent.log)
 
-        pass
+        with open("out.csv", "w") as f:
+            wr = csv.writer(f)
+            wr.writerows(res)
 
     def solve_conflict(self, conflict):
         time, pos = conflict
         agents = self.tile_map[pos].timestamp[time]
 
-        new_agents=[]
+        new_agents = []
         for agent in agents:
-            going_to= self.tile_map[agent.route[time-self.time+1]]
+            going_to = self.tile_map[agent.route[time-self.time+1]]
             for other_agent in going_to[time-self.time]:
                 if other_agent.route[time-self.time+1] == pos:
                     new_agents.append(other_agent)
 
-        #TODO Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
+        # TODO Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
 
         priorities = []
         for agent in agents:
