@@ -151,7 +151,6 @@ class Environment:
         task_ends = []
         done = [False for _ in range(len(self.agents))]
         while True:
-            # TODO: Main execution loop
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
@@ -194,6 +193,15 @@ class Environment:
         time, pos = conflict
         agents = self.tile_map[pos].timestamp[time]
 
+        new_agents=[]
+        for agent in agents:
+            going_to= self.tile_map[agent.route[time-self.time+1]]
+            for other_agent in going_to[time-self.time]:
+                if other_agent.route[time-self.time+1] == pos:
+                    new_agents.append(other_agent)
+
+        #TODO Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
+
         priorities = []
         for agent in agents:
             priorities.append((self.agents[agent].get_priority(), agent))
@@ -208,7 +216,7 @@ class Environment:
                                                         ].timestamp[time + 1]
 
                     new_conflicts = new_conflicts + self.agents[agent].shift_route(
-                        1, overlap_path_agents.contains(priority_agent))
+                        2, overlap_path_agents.contains(priority_agent))
 
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
@@ -216,6 +224,6 @@ class Environment:
                 overlap_path_agents = self.tile_map[self.agents[agent].route[0]
                                                     ].timestamp[time + 1]
                 new_conflicts = new_conflicts + self.agents[agent].shift_route(
-                    i, bool(set(agents).intersection(set(overlap_path_agents))))
+                    i+1, bool(set(agents).intersection(set(overlap_path_agents))))
 
         return new_conflicts
