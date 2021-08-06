@@ -21,11 +21,8 @@ class Agent:
         self.env = env
         self.task_handler = task_handler
         self.task = None
-<<<<<<< HEAD
         self.log = []
-=======
         self.time = 0
->>>>>>> 53fae48a316c6dbe0bb79f5cbcf6d941b5a7af7a
 
     def get_task(self):
         task = self.task_handler.get_task(self.id)
