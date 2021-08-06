@@ -1,6 +1,9 @@
+from numpy.lib.function_base import append
 from simulation.tile import Tile
 import math
 import multiprocessing as mp
+
+manager = mp.Manager()
 
 
 def average_point(listOfPoints):
@@ -10,13 +13,13 @@ def average_point(listOfPoints):
         x += point[0]
         y += point[1]
     tot = len(listOfPoints)
-    return (x/tot, y/tot)
+    return (x / tot, y / tot)
 
 
 def distance(env, start_node, goal):
     x1, y1 = average_point(env.key_to_raster(start_node.id))
     x2, y2 = average_point(env.key_to_raster(goal.id))
-    return math.sqrt(abs(x1-x2)) + math.sqrt(abs(y1-y2))
+    return math.sqrt(abs(x1 - x2)) + math.sqrt(abs(y1 - y2))
 
 
 def reconstruct_path(came_from, current_node):
@@ -74,23 +77,55 @@ def _singleAstarPP(dic, env, node, node2):
 
 
 def _singleAstarWP(dic, env, node, node2):
-    res = astar(env, node, node2)
+    res = []
     if node.id in dic:
-        dic[node.id][node2.id] = res
+        if node2.id not in dic[node.id]:
+            res = astar(env, node, node2)
+            dic[node.id][node2.id] = res
     else:
-        dic[node.id] = {node2.id: res}
-    for i in range(len(res)-1):
-        nodeid = res[i]
-        if nodeid in dic:
-            dic[nodeid][node2.id] = res[i+1:]
-        else:
-            dic[nodeid] = {node2.id: res[i+1:]}
+        res = astar(env, node, node2)
+        subDic = manager.dict()
+        subDic[node2.id] = res
+        dic[node.id] = subDic
+    if res != []:
+        for i in range(len(res) - 1):
+            nodeid = res[i]
+            if nodeid in dic:
+                dic[nodeid][node2.id] = res[i + 1:]
+            else:
+                subDic = manager.dict()
+                subDic[node2.id] = res[i + 1:]
+                dic[nodeid] = subDic
 
 
 def computeAstarRoutes(env):
-    manager = mp.Manager()
     job = []
     astarRoutes = manager.dict()
+
+    pods = []
+    walkables = []
+    picking_stations = []
+
+    for node in env.graph.nodes:
+        if node.type == Tile.POD:
+            pods.append(node)
+        elif node.type == Tile.PICKING_STATION:
+            picking_stations.append(node)
+        else:
+            walkables.append(node)
+
+    for node in walkables:
+        for node2 in pods:
+            job.append((astarRoutes, env, node, node2))
+    for node in picking_stations:
+        for node2 in pods:
+            job.append((astarRoutes, env, node, node2))
+    for node in pods:
+        for neighbour in node.adj:
+            if neighbour.type == Tile.WALKABLE:
+                for picking_station in picking_stations:
+                    job.append((astarRoutes, env, neighbour, picking_station))
+    """
     for node in env.graph.nodes:
         if node.type == Tile.POD:
             for node2 in env.graph.nodes:
@@ -100,12 +135,13 @@ def computeAstarRoutes(env):
             for node2 in env.graph.nodes:
                 if node2.type == Tile.POD:
                     job.append((astarRoutes, env, node, node2))
+    """
     tot = len(job)
     perc = 0
-    while(job != []):
+    while (job != []):
         tmp = []
         x = 0
-        while(job != [] and len(tmp) < 10):
+        while (job != [] and len(tmp) < 10):
             newJob = job.pop(0)
             done = False
             if newJob[2].id in astarRoutes:
@@ -120,8 +156,8 @@ def computeAstarRoutes(env):
         _ = [p.start() for p in tmp]
         _ = [p.join() for p in tmp]
 
-        percTmp = round((tot-len(job))/tot, 2)*100
+        percTmp = round((tot - len(job)) / tot, 2) * 100
         if percTmp != perc:
-            print(str(percTmp)+"%")
+            print(str(percTmp) + "%")
             perc = percTmp
     return dict(astarRoutes)

@@ -12,7 +12,7 @@ from simulation.graph.graph import Graph
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None, save=False):
+    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None, save=False, run=True):
         self.scheduling = scheduling
         self.raster_map = None
         self.tile_map = None
@@ -37,7 +37,8 @@ class Environment:
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
 
-        self.run()
+        if run:
+            self.run()
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
