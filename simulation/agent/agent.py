@@ -21,11 +21,15 @@ class Agent:
         self.env = env
         self.task_handler = task_handler
         self.task = None
+<<<<<<< HEAD
         self.log = []
+=======
+        self.time = 0
+>>>>>>> 53fae48a316c6dbe0bb79f5cbcf6d941b5a7af7a
 
     def get_task(self):
         task = self.task_handler.get_task(self.id)
-        if task == None:
+        if task is None:
             return True
         else:
             self.task = task
@@ -57,14 +61,14 @@ class Agent:
     def shift_route(self, shift, bad_conflict):
         if bad_conflict:
 
-            if self.direction(0) == 0:  # vado su o giù
-                tile_left = self.env.rastermap[(self.position - (1, 0))]
-                tile_right = self.env.rastermap[(self.position + (1, 0))]
+            if self.direction.value[0] == 0:  # Going up or down
+                tile_left = self.env.tile_map[(self.position - (1, 0))]
+                tile_right = self.env.tile_map[(self.position + (1, 0))]
 
-                if tile_left.type != Tile.WALKABLE and tile_left.type != Tile.ROBOT:
+                if tile_left.tile != Tile.WALKABLE and tile_left.tile != Tile.ROBOT:
                     self.invalidate_and_declare_route(
                         [self.position + (1, 0), self.position])
-                elif tile_right.type != Tile.WALKABLE and tile_right.type != Tile.ROBOT:
+                elif tile_right.tile != Tile.WALKABLE and tile_right.tile != Tile.ROBOT:
                     self.invalidate_and_declare_route(
                         [self.position - (1, 0), self.position])
                 else:
@@ -76,13 +80,13 @@ class Agent:
                             [self.position - (1, 0), self.position])
             else:
 
-                tile_down = self.env.rastermap[(self.position - (0, 1))]
-                tile_up = self.env.rastermap[(self.position + (0, 1))]
+                tile_down = self.env.tile_map[(self.position - (0, 1))]
+                tile_up = self.env.tile_map[(self.position + (0, 1))]
 
-                if tile_down.type != Tile.WALKABLE and tile_down.type != Tile.ROBOT:
+                if tile_down.tile != Tile.WALKABLE and tile_down.tile != Tile.ROBOT:
                     self.invalidate_and_declare_route(
                         [self.position + (0, 1), self.position])
-                elif tile_up.type != Tile.WALKABLE and tile_up.type != Tile.ROBOT:
+                elif tile_up.tile != Tile.WALKABLE and tile_up.tile != Tile.ROBOT:
                     self.invalidate_and_declare_route(
                         [self.position - (0, 1), self.position])
                 else:
@@ -100,7 +104,7 @@ class Agent:
     def invalidate_and_declare_route(self, steps):
         t = self.env.time
         for i, pos in enumerate(self.route):
-            self.env.raster_map[pos].timestamp[i+t].remove(self.id)
+            self.env.tile_map[pos].timestamp[i+t].remove(self.id)
         self.route = steps+self.route
         return self.declare_route()
 

@@ -3,6 +3,7 @@ import numpy as np
 
 from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
+from simulation.cell import Cell
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 from multiprocessing import set_start_method
@@ -15,6 +16,7 @@ class Environment:
     def __init__(self, map_path=None, cfg_path='../config.yaml', n=50, scheduling=None):
         self.scheduling = [] if scheduling is None else scheduling
         self.raster_map = None
+        self.tile_map = None
         self.map_shape = ()
         self.graph = None
         self.agents = {}
@@ -56,21 +58,22 @@ class Environment:
         return pods
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
-        with self.lock:
-            if coord is not None:
-                node = self.graph.get_node(self.raster_to_graph[coord])
-                node.type = tile
-                self.raster_map[coord[0]][coord[1]] = tile.value
-            if key is not None:
-                node = self.graph.get_node(key)
-                node.type = tile
-                x, y = self.key_to_raster(key)[0]
-                self.raster_map[x][y] = tile.value
+        if coord is not None:
+            node = self.graph.get_node(self.raster_to_graph[coord])
+            node.type = tile
+            self.raster_map[coord[0]][coord[1]] = tile.value
+            self.tile_map[coord[0]][coord[1]].tile = tile
+        if key is not None:
+            node = self.graph.get_node(key)
+            node.type = tile
+            x, y = self.key_to_raster(key)[0]
+            self.raster_map[x][y] = tile.value
 
     def __load_map(self, map_path):
         map_path = 'map.csv' if map_path is None else map_path
         self.raster_map = np.array(pd.read_csv(map_path, header=None))
         self.map_shape = self.raster_map.shape
+        self.__gen_tile_map()
 
     def __gen_graph(self):
         picking_station_number = self.__get_picking_stations_number()
@@ -125,11 +128,18 @@ class Environment:
                 self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
 
+    def __gen_tile_map(self):
+        self.tile_map = np.zeros_like(self.raster_map)
+        for i, row in enumerate(self.raster_map):
+            for j, cell in enumerate(row):
+                self.tile_map[i][j] = Cell(Tile(cell))
+
+
     def __spawn_agents(self, cfg_path):
         # TODO: Implement agent spawn
         pass
 
-    def run(self, scheduling):
+    def run(self):
         conflicts = []
         task_ends = []
         done = [False for _ in range(len(self.agents))]
@@ -170,7 +180,7 @@ class Environment:
 
     def solve_conflict(self, conflict):
         time, pos = conflict
-        agents = self.raster_map[pos].timestamp[time]
+        agents = self.tile_map[pos].timestamp[time]
 
         priorities = []
         for agent in agents:
@@ -182,7 +192,7 @@ class Environment:
             priority_agent = max(priorities)[1]
             for agent in agents:
                 if agent is not priority_agent:
-                    overlap_path_agents = self.raster_map[self.agents[agent].route[0]].timestamp[time + 1]
+                    overlap_path_agents = self.tile_map[self.agents[agent].route[0]].timestamp[time + 1]
 
                     new_c = self.agents[agent].shift_route(
                         1, overlap_path_agents.contains(priority_agent))
@@ -192,7 +202,7 @@ class Environment:
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
-                overlap_path_agents = self.raster_map[self.agents[agent].route[0]].timestamp[time + 1]
+                overlap_path_agents = self.tile_map[self.agents[agent].route[0]].timestamp[time + 1]
                 new_c = self.agents[agent].shift_route(
                     i, bool(set(agents).intersection(set(overlap_path_agents))))
                 if new_c is not None:
