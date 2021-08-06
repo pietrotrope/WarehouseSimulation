@@ -155,6 +155,8 @@ class Environment:
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
+                    if done[i]:
+                        agent.position = agent.home
                     conflicts = conflicts + agent.declare_route()
                 task_ends.append(self.time + len(agent.route))
 
