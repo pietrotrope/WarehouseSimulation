@@ -7,9 +7,6 @@ from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
-from multiprocessing import set_start_method
-
-set_start_method("fork")
 
 
 class Environment:
@@ -25,6 +22,8 @@ class Environment:
         self.__id = 0
         self.__load_map(map_path)
         self.__gen_graph()
+        self.task_handler = TaskHandler(self, 10)
+        self.task_handler.gen_schedule()
         self.__spawn_agents(cfg_path)
         self.time = 0
         self.task_pool = {}
@@ -34,8 +33,6 @@ class Environment:
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
-
-        self.task_handler = self.task_handler(self, task_number)
 
         self.run()
 
@@ -133,7 +130,7 @@ class Environment:
             node.coord = picking_station
 
     def __gen_tile_map(self):
-        self.tile_map = np.zeros_like(self.raster_map)
+        self.tile_map = np.zeros_like(self.raster_map).tolist()
         for i, row in enumerate(self.raster_map):
             for j, cell in enumerate(row):
                 self.tile_map[i][j] = Cell(Tile(cell))
@@ -143,7 +140,7 @@ class Environment:
         self.agents = []
 
         for i in range(len(positions)):
-            agent = Agent(i, positions[i], self)
+            agent = Agent(i, positions[i], self, task_handler=self.task_handler)
 
             self.agents.append(agent)
 
@@ -152,6 +149,7 @@ class Environment:
         task_ends = []
         done = [False for _ in range(len(self.agents))]
         while True:
+            print('ciao')
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
