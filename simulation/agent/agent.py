@@ -32,10 +32,6 @@ class Agent:
             self.task = task
             return False
 
-    def get_priority(self, pos):
-        # TODO: return number of remaining steps from current position to destination
-        pass
-
     def declare_route(self):
         conflict = None
         for i in range(len(self.route)):
@@ -50,12 +46,15 @@ class Agent:
             if len(self.env.raster_map[x][y].timestamp[i + self.env.time]) > 1 and conflict is None:
                 conflict = (i + self.env.time, (x, y))
 
+            #TODO Trovato problema (se due che hanno priorità hanno + errori sul cammino)
+
         return conflict
 
     def get_priority(self):
         return random.random()
 
     def shift_route(self, shift, bad_conflict):
+        #TODO NUOVO PROBLEMA SUI TIPI DI CONFLITTI, Se non finiscono nella stessa cella ma si sovrappongono i cammini
         if bad_conflict:
 
             if self.direction.value[0] == 0:  # Going up or down

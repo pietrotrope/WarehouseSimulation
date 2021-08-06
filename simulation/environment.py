@@ -139,7 +139,7 @@ class Environment:
         # TODO: Implement agent spawn
         pass
 
-    def run(self):
+    def run(self, save = False):
         conflicts = []
         task_ends = []
         done = [False for _ in range(len(self.agents))]
@@ -175,8 +175,14 @@ class Environment:
                 continue
 
             if done.count(True) == len(done):
+                if save:
+                    self.save_data()
+
                 break
             pass
+    
+    def save_data(self):
+        pass
 
     def solve_conflict(self, conflict):
         time, pos = conflict
