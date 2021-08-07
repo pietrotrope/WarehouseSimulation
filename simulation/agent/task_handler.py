@@ -32,8 +32,10 @@ class TaskHandler:
             return self.task_pool[selected_task]
             
         else:
-            task_id = list(self.task_pool.keys())[0]
-            task = self.task_pool[task_id]
-            del self.task_pool[task_id]
-            return task
-
+            try:
+                task_id = list(self.task_pool.keys())[0]
+                task = self.task_pool[task_id]
+                del self.task_pool[task_id]
+                return task
+            except Exception:
+                return None

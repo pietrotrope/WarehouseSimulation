@@ -41,7 +41,6 @@ class Agent:
             route_to_ps.reverse()
             route = route + route_to_ps
             self.route = [self.env.key_to_raster(cell)[0] for cell in route]
-            # list(map(self.env.key_to_raster, route))
             return False
 
     def declare_route(self):
@@ -60,7 +59,8 @@ class Agent:
 
             if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp:
                 for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
-                    if self.env.agents[other_agent].route[self.env.agents[other_agent].time - self.env.time + i] == (x, y):
+                    if self.id != other_agent and self.env.agents[other_agent].route[
+                            self.env.agents[other_agent].time - self.env.time + i] == (x, y):
                         conflicts.append((i + self.env.time, (x, y)))
         return conflicts
 
@@ -121,19 +121,23 @@ class Agent:
 
         t = self.env.time
         for i, pos in enumerate(self.route):
-            self.env.tile_map[pos[0]][pos[1]].timestamp[i+t-1].remove(self.id)
+            self.env.tile_map[pos[0]][pos[1]].timestamp[i+t].remove(self.id)
         self.route = steps+self.route
         return self.declare_route()
 
     def skip_to(self, t):
-        if self.route:
-            self.log = self.log + self.route[0:t]
-            self.position = self.route[t-self.time - 1]
-            self.route = self.route[t-self.time - 1:len(self.route)]
+        delta = t - self.time
+        if len(self.route) > delta:
+            self.log = self.log + self.route[0:delta]
+            self.position = self.route[delta]
+            self.route = self.route[delta:]
             if len(self.route) > 1:
                 self.direction = (
                     self.route[0][0] - self.route[1][0], self.route[0][1] - self.route[0][1])
             else:
                 self.direction = (0, 0)
+        else:
+            self.position = self.route[-1] if self.route else self.home
+            self.route = []
+            self.direction = (0, 0)
         self.time = t
-        pass

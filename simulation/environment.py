@@ -1,3 +1,5 @@
+import sys
+
 import pandas as pd
 import numpy as np
 import csv
@@ -12,7 +14,8 @@ from simulation.graph.graph import Graph
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None, save=False, run=True):
+    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None,
+                 save=False, run=True):
         self.scheduling = scheduling
         self.raster_map = None
         self.tile_map = None
@@ -84,8 +87,8 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-            (np.count_nonzero(self.raster_map == 4) -
-             picking_station_number)
+                      (np.count_nonzero(self.raster_map == 4) -
+                       picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -151,7 +154,7 @@ class Environment:
 
     def run(self):
         conflicts = []
-        task_ends = []
+        task_ends = [0 for _ in range(len(self.agents))]
         done = [False for _ in range(len(self.agents))]
         while True:
             for i, agent in enumerate(self.agents):
@@ -160,16 +163,15 @@ class Environment:
                     if done[i]:
                         agent.position = agent.home
                     conflicts = conflicts + agent.declare_route()
-                task_ends.append(self.time + len(agent.route))
-
-            if min(conflicts)[0] > min(task_ends):
-                self.time = min(task_ends)
-                task_ends.remove(self.time)
-                for agent in self.agents:
-                    agent.skip_to(self.time)
-                continue
+                task_ends[i] = self.time + len(agent.route) if not done[i] else sys.maxsize
 
             if conflicts:
+                if min(conflicts)[0] > min(task_ends):
+                    self.time = min(task_ends)
+                    for agent in self.agents:
+                        agent.skip_to(self.time)
+                    continue
+
                 conflict_time = min(conflicts)[0]
 
                 self.time = conflict_time - 1
@@ -180,13 +182,15 @@ class Environment:
                     first_conflict = min(conflicts)
 
                     if first_conflict[0] == conflict_time:
-
                         conflicts = conflicts + \
-                            self.solve_conflict(first_conflict)
+                                    self.solve_conflict(first_conflict)
 
                         conflicts.remove(first_conflict)
 
-                continue
+            else:
+                self.time = min(task_ends)
+                for agent in self.agents:
+                    agent.skip_to(self.time)
 
             if done.count(True) == len(done):
 
@@ -200,7 +204,7 @@ class Environment:
         for agent in self.agents:
             res.append(agent.log)
 
-        with open("out.csv", "w") as f:
+        with open("./out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
 
@@ -210,11 +214,11 @@ class Environment:
 
         new_agents = []
         for agent in agents:
-            tmp_pos = self.agents[agent].route[time-self.time-1]
+            tmp_pos = self.agents[agent].route[time - self.time - 1]
             going_to = self.tile_map[tmp_pos[0]][tmp_pos[1]]
-            if time-self.time-2 in going_to.timestamp:
-                for other_agent in going_to.timestamp[time-self.time-2]:
-                    if self.agents[other_agent].route[time-self.time-1] == pos:
+            if time - self.time - 2 in going_to.timestamp:
+                for other_agent in going_to.timestamp[time - self.time - 2]:
+                    if self.agents[other_agent].route[time - self.time - 1] == pos:
                         new_agents.append(other_agent)
 
         # TODO Problema assegnazione task contemporanea stessa cella
@@ -232,9 +236,9 @@ class Environment:
             for agent in agents:
                 if agent is not priority_agent:
                     tmp_pos = self.agents[agent].route[0]
-                    if time+1 in self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp:
+                    if time + 1 in self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp:
                         overlap_path_agents = self.tile_map[tmp_pos[0]
-                                                            ][tmp_pos[1]].timestamp[time + 1]
+                        ][tmp_pos[1]].timestamp[time + 1]
 
                         new_conflicts = new_conflicts + self.agents[agent].shift_route(
                             2, priority_agent in overlap_path_agents)
@@ -243,9 +247,8 @@ class Environment:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
                 tmp_pos = self.agents[agent].route[0]
-                overlap_path_agents = self.tile_map[tmp_pos[0]
-                                                    ][tmp_pos[1]].timestamp[time + 1]
+                overlap_path_agents = self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp[time + 1]
                 new_conflicts = new_conflicts + self.agents[agent].shift_route(
-                    i+1, bool(set(agents).intersection(set(overlap_path_agents))))
+                    i + 1, bool(set(agents).intersection(set(overlap_path_agents))))
 
         return new_conflicts
