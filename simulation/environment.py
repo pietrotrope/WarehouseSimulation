@@ -26,7 +26,7 @@ class Environment:
         self.__id = 0
         self.__load_map(map_path)
         self.__gen_graph()
-        self.task_handler = TaskHandler(self, 10)
+        self.task_handler = TaskHandler(self, 1000)
         self.__spawn_agents(cfg_path)
         self.time = 0
         self.task_pool = {}
@@ -214,12 +214,13 @@ class Environment:
 
         new_agents = []
         for agent in agents:
-            tmp_pos = self.agents[agent].route[time - self.time - 1]
-            going_to = self.tile_map[tmp_pos[0]][tmp_pos[1]]
-            if time - self.time - 2 in going_to.timestamp:
-                for other_agent in going_to.timestamp[time - self.time - 2]:
-                    if self.agents[other_agent].route[time - self.time - 1] == pos:
-                        new_agents.append(other_agent)
+            if self.agents[agent].route:
+                x, y = self.agents[agent].route[0]
+                going_to = self.tile_map[x][y]
+                if time - self.time - 2 in going_to.timestamp:
+                    for other_agent in going_to.timestamp[time - self.time - 2]:
+                        if self.agents[other_agent].route[time - self.time - 1] == pos:
+                            new_agents.append(other_agent)
 
         # TODO Problema assegnazione task contemporanea stessa cella
 
@@ -246,9 +247,13 @@ class Environment:
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
-                tmp_pos = self.agents[agent].route[0]
-                overlap_path_agents = self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp[time + 1]
-                new_conflicts = new_conflicts + self.agents[agent].shift_route(
-                    i + 1, bool(set(agents).intersection(set(overlap_path_agents))))
-
+                try:
+                    if self.agents[agent[1]].route:
+                        x, y = self.agents[agent[1]].route[0]
+                        if time + 1 in self.tile_map[x][y].timestamp:
+                            overlap_path_agents = self.tile_map[x][y].timestamp[time + 1]
+                            new_conflicts += self.agents[
+                                agent[1]].shift_route(i + 1, bool(set(agents).intersection(set(overlap_path_agents))))
+                except Exception:
+                    breakpoint()
         return new_conflicts

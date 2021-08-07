@@ -59,9 +59,12 @@ class Agent:
 
             if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp:
                 for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
-                    if self.id != other_agent and self.env.agents[other_agent].route[
-                            self.env.agents[other_agent].time - self.env.time + i] == (x, y):
-                        conflicts.append((i + self.env.time, (x, y)))
+                    try:
+                        if self.id != other_agent and len(self.env.agents[other_agent].route) > i:
+                            if self.env.agents[other_agent].route[i - 1] == (x, y):
+                                conflicts.append((i + self.env.time, (x, y)))
+                    except BaseException:
+                        breakpoint()
         return conflicts
 
     @staticmethod
@@ -120,8 +123,11 @@ class Agent:
     def invalidate_and_declare_route(self, steps):
 
         t = self.env.time
-        for i, pos in enumerate(self.route):
-            self.env.tile_map[pos[0]][pos[1]].timestamp[i+t].remove(self.id)
+        for i, (x, y) in enumerate(self.route):
+            try:
+                self.env.tile_map[x][y].timestamp[i+t].remove(self.id)
+            except KeyError:
+                breakpoint()
         self.route = steps+self.route
         return self.declare_route()
 
