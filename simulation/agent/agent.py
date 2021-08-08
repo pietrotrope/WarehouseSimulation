@@ -44,7 +44,7 @@ class Agent:
             return False
 
     def declare_route(self):
-        conflicts = []
+        conflicts = set()
         for i in range(len(self.route)):
             x, y = self.route[i]
             if (i + self.env.time) in self.env.tile_map[x][y].timestamp:
@@ -55,14 +55,15 @@ class Agent:
                                                   self.env.time] = [self.id]
 
             if len(self.env.tile_map[x][y].timestamp[i + self.env.time]) > 1:
-                conflicts.append((i + self.env.time, (x, y)))
+                conflicts.add((i + self.env.time, (x, y)))
 
-            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp:
+            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp and i>0:
                 for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
                     try:
                         if self.id != other_agent and len(self.env.agents[other_agent].route) > i:
-                            if self.env.agents[other_agent].route[i - 1] == (x, y):
-                                conflicts.append((i + self.env.time, (x, y)))
+
+                            if self.env.agents[other_agent].route[i - 1] == (x, y) and self.env.agents[other_agent].route[i] == self.route[i-1]:
+                                conflicts.add((i + self.env.time, (x, y)))
                     except BaseException:
                         breakpoint()
         return conflicts
@@ -125,7 +126,10 @@ class Agent:
         t = self.env.time
         for i, (x, y) in enumerate(self.route):
             try:
-                self.env.tile_map[x][y].timestamp[i+t].remove(self.id)
+                if i+t in self.env.tile_map[x][y].timestamp and self.id in self.env.tile_map[x][y].timestamp[i+t]:
+                    self.env.tile_map[x][y].timestamp[i+t].remove(self.id)
+                else:
+                    self.env.tile_map[x][y].timestamp[i+t+1].remove(self.id)
             except KeyError:
                 breakpoint()
         self.route = steps+self.route

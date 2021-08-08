@@ -153,7 +153,7 @@ class Environment:
             self.agents.append(agent)
 
     def run(self):
-        conflicts = []
+        conflicts = set()
         task_ends = [0 for _ in range(len(self.agents))]
         done = [False for _ in range(len(self.agents))]
         while True:
@@ -162,10 +162,9 @@ class Environment:
                     done[i] = agent.get_task()
                     if done[i]:
                         agent.position = agent.home
-                    conflicts = conflicts + agent.declare_route()
+                    conflicts = conflicts.union(agent.declare_route())
                 task_ends[i] = self.time + \
                     len(agent.route) if not done[i] else sys.maxsize
-
             if conflicts:
                 if min(conflicts)[0] > min(task_ends):
                     self.time = min(task_ends)
@@ -183,8 +182,8 @@ class Environment:
                     first_conflict = min(conflicts)
 
                     if first_conflict[0] == conflict_time:
-                        conflicts = conflicts + \
-                            self.solve_conflict(first_conflict)
+                        conflicts = conflicts.union(
+                            self.solve_conflict(first_conflict))
 
                         conflicts.remove(first_conflict)
 
@@ -194,7 +193,6 @@ class Environment:
                     agent.skip_to(self.time)
 
             if done.count(True) == len(done):
-
                 if self.save:
                     self.save_data()
                 break
@@ -213,7 +211,7 @@ class Environment:
         time, pos = conflict
         agents = self.tile_map[pos[0]][pos[1]].timestamp[time]
 
-        new_conflicts = []
+        new_conflicts = set()
 
         new_agents = []
         for agent in agents:
@@ -225,8 +223,8 @@ class Environment:
                         if self.agents[other_agent].route[0] == pos:
                             new_agents.append(other_agent)
         for agent in new_agents:
-            new_conflicts = new_conflicts + self.agents[agent].shift_route(
-                1, True)
+            new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
+                1, True))
 
         # TODO Problema assegnazione task contemporanea stessa cella
         # TODO Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
@@ -244,19 +242,19 @@ class Environment:
                         overlap_path_agents = self.tile_map[tmp_pos[0]
                                                             ][tmp_pos[1]].timestamp[time + 1]
 
-                        new_conflicts = new_conflicts + self.agents[agent].shift_route(
-                            2, priority_agent in overlap_path_agents)
+                        new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
+                            2, priority_agent in overlap_path_agents))
 
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
                 try:
-                    if self.agents[agent[1]].route:
-                        x, y = self.agents[agent[1]].route[0]
+                    if i>0 and len(self.agents[agent[i]].route)>0:
+                        x, y = self.agents[agent[i]].route[0]
                         if time + 1 in self.tile_map[x][y].timestamp:
                             overlap_path_agents = self.tile_map[x][y].timestamp[time + 1]
-                            new_conflicts += self.agents[
-                                agent[1]].shift_route(i + 1, bool(set(agents).intersection(set(overlap_path_agents))))
-                except Exception:
+                            new_conflicts = new_conflicts.union(self.agents[
+                                agent[i]].shift_route(i + 1, bool(set(agents).intersection(set(overlap_path_agents)))))
+                except Exception as e:
                     breakpoint()
         return new_conflicts
