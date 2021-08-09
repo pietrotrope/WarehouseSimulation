@@ -23,7 +23,7 @@ class Agent:
         self.env = env
         self.task_handler = task_handler
         self.task = None
-        self.log = []
+        self.log = [position]
         self.time = 0
 
     def get_task(self):
@@ -50,22 +50,18 @@ class Agent:
             if (i + self.env.time) in self.env.tile_map[x][y].timestamp:
                 self.env.tile_map[x][y].timestamp[i +
                                                   self.env.time].append(self.id)
+                for agent in self.env.tile_map[x][y].timestamp[i + self.env.time]:
+                    conflicts.add((i + self.env.time, (x, y), agent, 0))
             else:
-                self.env.tile_map[x][y].timestamp[i +
-                                                  self.env.time] = [self.id]
+                self.env.tile_map[x][y].timestamp[i+self.env.time] = [self.id]
 
-            if len(self.env.tile_map[x][y].timestamp[i + self.env.time]) > 1:
-                conflicts.add((i + self.env.time, (x, y)))
-
-            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp and i>0:
+            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp and i > 0:
                 for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
-                    try:
-                        if self.id != other_agent and len(self.env.agents[other_agent].route) > i:
-
-                            if self.env.agents[other_agent].route[i - 1] == (x, y) and self.env.agents[other_agent].route[i] == self.route[i-1]:
-                                conflicts.add((i + self.env.time, (x, y)))
-                    except BaseException:
-                        breakpoint()
+                    if self.id != other_agent and len(self.env.agents[other_agent].route) > i:
+                        if self.env.agents[other_agent].route[i - 1] == self.route[i] and self.env.agents[other_agent].route[i] == self.route[i-1]:
+                            conflicts.add(
+                                (i + self.env.time, (x, y), self.env.agents[other_agent], 1))
+                            print(self.env.time+i)
         return conflicts
 
     @staticmethod
@@ -83,18 +79,18 @@ class Agent:
                                                1][self.position[1]]
 
                 if tile_left.tile != Tile.WALKABLE and tile_left.tile != Tile.ROBOT:
-                    return self.invalidate_and_declare_route(
-                        [(self.position[0]+1, self.position[1]), self.position])
+                    to_add = [(self.position[0]+1, self.position[1])]*shift
+                    return self.invalidate_and_declare_route(to_add+[self.position])
                 elif tile_right.tile != Tile.WALKABLE and tile_right.tile != Tile.ROBOT:
-                    return self.invalidate_and_declare_route(
-                        [(self.position[0]-1, self.position[1]), self.position])
+                    to_add = [(self.position[0]-1, self.position[1])]*shift
+                    return self.invalidate_and_declare_route(to_add+[self.position])
                 else:
                     if random.random() < 0.5:
-                        return self.invalidate_and_declare_route(
-                            [(self.position[0]+1, self.position[1]), self.position])
+                        to_add = [(self.position[0]+1, self.position[1])]*shift
+                        return self.invalidate_and_declare_route(to_add+[self.position])
                     else:
-                        return self.invalidate_and_declare_route(
-                            [(self.position[0]-1, self.position[1]), self.position])
+                        to_add = [(self.position[0]-1, self.position[1])]*shift
+                        return self.invalidate_and_declare_route(to_add+[self.position])
             else:
 
                 tile_down = self.env.tile_map[self.position[0]
@@ -103,43 +99,34 @@ class Agent:
                                             ][self.position[1]+1]
 
                 if tile_down.tile != Tile.WALKABLE and tile_down.tile != Tile.ROBOT:
-                    return self.invalidate_and_declare_route(
-                        [(self.position[0], self.position[1]+1), self.position])
+                    to_add = [(self.position[0], self.position[1]+1)]*shift
+                    return self.invalidate_and_declare_route(to_add+[self.position])
                 elif tile_up.tile != Tile.WALKABLE and tile_up.tile != Tile.ROBOT:
-                    return self.invalidate_and_declare_route(
-                        [(self.position[0], self.position[1]-1), self.position])
+                    to_add = [(self.position[0], self.position[1]-1)]*shift
+                    return self.invalidate_and_declare_route(to_add+[self.position])
                 else:
                     if random.random() < 0.5:
-                        return self.invalidate_and_declare_route(
-                            [(self.position[0], self.position[1]+1), self.position])
+                        to_add = [(self.position[0], self.position[1]+1)]*shift
+                        return self.invalidate_and_declare_route(to_add+[self.position])
                     else:
-                        return self.invalidate_and_declare_route(
-                            [(self.position[0], self.position[1]-1), self.position])
-
+                        to_add = [(self.position[0], self.position[1]-1)]*shift
+                        return self.invalidate_and_declare_route(to_add+[self.position])
         else:
-
             steps = [self.route[0]]*shift
             return self.invalidate_and_declare_route(steps)
 
     def invalidate_and_declare_route(self, steps):
-
         t = self.env.time
         for i, (x, y) in enumerate(self.route):
-            try:
-                if i+t in self.env.tile_map[x][y].timestamp and self.id in self.env.tile_map[x][y].timestamp[i+t]:
-                    self.env.tile_map[x][y].timestamp[i+t].remove(self.id)
-                else:
-                    self.env.tile_map[x][y].timestamp[i+t+1].remove(self.id)
-            except KeyError:
-                breakpoint()
+            self.env.tile_map[x][y].timestamp[i+t].remove(self.id)
         self.route = steps+self.route
         return self.declare_route()
 
     def skip_to(self, t):
         delta = t - self.time
-        if len(self.route) > delta:
+        if len(self.route) >= delta and delta >= 0:
             self.log = self.log + self.route[0:delta]
-            self.position = self.route[delta]
+            self.position = self.route[delta-1]
             self.route = self.route[delta:]
             if len(self.route) > 1:
                 self.direction = (
@@ -148,6 +135,10 @@ class Agent:
                 self.direction = (0, 0)
         else:
             self.position = self.route[-1] if self.route else self.home
+            if len(self.route) > 0:
+                self.log = self.log + self.route
+            else:
+                self.log.append(self.position)
             self.route = []
             self.direction = (0, 0)
         self.time = t

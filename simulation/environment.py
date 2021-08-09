@@ -39,7 +39,6 @@ class Environment:
 
         with open('astar/astarRoutes.json', 'r') as f:
             self.routes = json.load(f)
-
         if run:
             self.run()
 
@@ -166,20 +165,20 @@ class Environment:
                 task_ends[i] = self.time + \
                     len(agent.route) if not done[i] else sys.maxsize
             if conflicts:
-                if min(conflicts)[0] > min(task_ends):
+                if min(conflicts, key = lambda t: t[0])[0] > min(task_ends):
                     self.time = min(task_ends)
                     for agent in self.agents:
                         agent.skip_to(self.time)
                     continue
 
-                conflict_time = min(conflicts)[0]
+                conflict_time = min(conflicts, key = lambda t: t[0])[0]
 
                 self.time = conflict_time - 1
                 for agent in self.agents:
                     agent.skip_to(self.time)
 
                 while conflict_time in list(map(lambda x: x[0], conflicts)):
-                    first_conflict = min(conflicts)
+                    first_conflict = min(conflicts, key = lambda t: t[0])
 
                     if first_conflict[0] == conflict_time:
                         conflicts = conflicts.union(
@@ -208,53 +207,48 @@ class Environment:
             wr.writerows(res)
 
     def solve_conflict(self, conflict):
-        time, pos = conflict
+        time, pos, agents, flag = conflict
         agents = self.tile_map[pos[0]][pos[1]].timestamp[time]
-
         new_conflicts = set()
 
-        new_agents = []
-        for agent in agents:
-            if self.agents[agent].route:
-                x, y = self.agents[agent].route[0]
-                going_to = self.tile_map[x][y]
-                if 1 in going_to.timestamp:
-                    for other_agent in going_to.timestamp[1]:
-                        if self.agents[other_agent].route[0] == pos:
-                            new_agents.append(other_agent)
-        for agent in new_agents:
-            new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
-                1, True))
-
         # TODO Problema assegnazione task contemporanea stessa cella
-        # TODO Risolvi i conflitti dei new_agents (agenti che hanno il secondo tipo di conflitto spostandosi nella cella segnata dal conflitto)
 
         priorities = []
         for agent in agents:
             priorities.append((self.agents[agent].get_priority(), agent))
 
+        if len(priorities)>0:
+            priority_agent = max(priorities)[1]
+
+            if flag:
+                for agent in agents:
+                    new_conflicts = new_conflicts.union(self.agents[agent].shift_route(2, True))
+
+        """
         if len(priorities) == 2:
             priority_agent = max(priorities)[1]
             for agent in agents:
-                if agent is not priority_agent:
-                    tmp_pos = self.agents[agent].route[0]
-                    if time + 1 in self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp:
+                if agent is not priority_agent and len(self.agents[agent].route) > 0:
+                    tmp_pos = self.agents[agent].position
+                    if time in self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp:
                         overlap_path_agents = self.tile_map[tmp_pos[0]
-                                                            ][tmp_pos[1]].timestamp[time + 1]
+                                                            ][tmp_pos[1]].timestamp[time]
 
                         new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
                             2, priority_agent in overlap_path_agents))
-
+                    else:
+                        new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
+                            2, False))
+                        
+        
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
-                try:
-                    if i>0 and len(self.agents[agent[i]].route)>0:
-                        x, y = self.agents[agent[i]].route[0]
-                        if time + 1 in self.tile_map[x][y].timestamp:
-                            overlap_path_agents = self.tile_map[x][y].timestamp[time + 1]
-                            new_conflicts = new_conflicts.union(self.agents[
-                                agent[i]].shift_route(i + 1, bool(set(agents).intersection(set(overlap_path_agents)))))
-                except Exception as e:
-                    breakpoint()
+                if i > 0 and len(self.agents[agent[1]].route) > 0:
+                    x, y = self.agents[agent[1]].route[0]
+                    if time in self.tile_map[x][y].timestamp:
+                        overlap_path_agents = self.tile_map[x][y].timestamp[time]
+                        new_conflicts = new_conflicts.union(self.agents[
+                            agent[1]].shift_route(i + 1, overlap_path_agents))
+        """
         return new_conflicts
