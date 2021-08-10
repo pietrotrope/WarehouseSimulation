@@ -41,6 +41,20 @@ class Environment:
             self.routes = json.load(f)
         if run:
             self.run()
+    
+    def new_simulation(self, task_number=50, run=True):
+        self.time=0
+        self.task_handler = TaskHandler(self, task_number)
+        for agent in self.agents:
+            agent.position = agent.home
+            agent.task= None
+            agent.route=[]
+            agent.time=0
+            agent.log=[agent.position]
+            agent.task_handler = self.task_handler
+        if run:
+            self.run()
+
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -165,13 +179,12 @@ class Environment:
                 task_ends[i] = self.time + \
                     len(agent.route) if not done[i] else sys.maxsize
             if conflicts:
-                if min(conflicts, key = lambda t: t[0])[0] > min(task_ends):
+                conflict_time = min(conflicts, key = lambda t: t[0])[0]
+                if conflict_time > min(task_ends):
                     self.time = min(task_ends)
                     for agent in self.agents:
                         agent.skip_to(self.time)
                     continue
-
-                conflict_time = min(conflicts, key = lambda t: t[0])[0]
 
                 self.time = conflict_time - 1
                 for agent in self.agents:
@@ -179,13 +192,8 @@ class Environment:
 
                 while conflict_time in list(map(lambda x: x[0], conflicts)):
                     first_conflict = min(conflicts, key = lambda t: t[0])
-
-                    if first_conflict[0] == conflict_time:
-                        conflicts = conflicts.union(
-                            self.solve_conflict(first_conflict))
-
-                        conflicts.remove(first_conflict)
-
+                    conflicts = conflicts.union(self.solve_conflict(first_conflict))
+                    conflicts.remove(first_conflict)
             else:
                 self.time = min(task_ends)
                 for agent in self.agents:
