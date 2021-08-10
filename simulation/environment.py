@@ -196,7 +196,8 @@ class Environment:
             else:
                 self.time = min(task_ends)
                 for agent in self.agents:
-                    agent.skip_to(self.time)
+                    if agent.time != self.time:
+                        agent.skip_to(self.time)
 
             if done.count(True) == len(done):
                 if self.save:
