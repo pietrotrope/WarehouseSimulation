@@ -41,20 +41,19 @@ class Environment:
             self.routes = json.load(f)
         if run:
             self.run()
-    
+
     def new_simulation(self, task_number=50, run=True):
-        self.time=0
+        self.time = 0
         self.task_handler = TaskHandler(self, task_number)
         for agent in self.agents:
             agent.position = agent.home
-            agent.task= None
-            agent.route=[]
-            agent.time=0
-            agent.log=[agent.position]
+            agent.task = None
+            agent.route = []
+            agent.time = 0
+            agent.log = [agent.position]
             agent.task_handler = self.task_handler
         if run:
             self.run()
-
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -100,8 +99,8 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-            (np.count_nonzero(self.raster_map == 4) -
-             picking_station_number)
+                      (np.count_nonzero(self.raster_map == 4) -
+                       picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -167,8 +166,8 @@ class Environment:
 
     def run(self):
         conflicts = set()
-        task_ends = [0 for _ in range(len(self.agents))]
-        done = [False for _ in range(len(self.agents))]
+        task_ends = [0 for _ in range(self.agent_number)]
+        done = [False for _ in range(self.agent_number)]
         while True:
             for i, agent in enumerate(self.agents):
                 if not agent.route:
@@ -177,9 +176,9 @@ class Environment:
                         agent.position = agent.home
                     conflicts = conflicts.union(agent.declare_route())
                 task_ends[i] = self.time + \
-                    len(agent.route) if not done[i] else sys.maxsize
+                               len(agent.route) if not done[i] else sys.maxsize
             if conflicts:
-                conflict_time = min(conflicts, key = lambda t: t[0])[0]
+                conflict_time = min(conflicts, key=lambda t: t[0])[0]
                 if conflict_time > min(task_ends):
                     self.time = min(task_ends)
                     for agent in self.agents:
@@ -191,7 +190,7 @@ class Environment:
                     agent.skip_to(self.time)
 
                 while conflict_time in list(map(lambda x: x[0], conflicts)):
-                    first_conflict = min(conflicts, key = lambda t: t[0])
+                    first_conflict = min(conflicts, key=lambda t: t[0])
                     conflicts = conflicts.union(self.solve_conflict(first_conflict))
                     conflicts.remove(first_conflict)
             else:
@@ -209,28 +208,18 @@ class Environment:
         res = []
         for agent in self.agents:
             res.append(agent.log)
-
         with open("./out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
 
     def solve_conflict(self, conflict):
-        time, pos, agents, flag = conflict
-        agents = self.tile_map[pos[0]][pos[1]].timestamp[time]
+        time, pos, agent, flag = conflict
         new_conflicts = set()
 
         # TODO Problema assegnazione task contemporanea stessa cella
 
-        priorities = []
-        for agent in agents:
-            priorities.append((self.agents[agent].get_priority(), agent))
-
-        if len(priorities)>0:
-            priority_agent = max(priorities)[1]
-
-            if flag:
-                for agent in agents:
-                    new_conflicts = new_conflicts.union(self.agents[agent].shift_route(2, True))
+        # if flag:
+        # new_conflicts = new_conflicts.union(agent.shift_route(2, True))
 
         """
         if len(priorities) == 2:
@@ -247,8 +236,8 @@ class Environment:
                     else:
                         new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
                             2, False))
-                        
-        
+
+
         elif len(priorities) > 2:
             priorities.sort(reverse=True)
             for i, agent in enumerate(priorities):
