@@ -10,6 +10,22 @@ movement = {
 }
 
 
+def detect_conflicts(agent, i):
+    x, y = agent.route[i]
+    conflicts = set()
+    if (i + agent.env.time) in agent.env.tile_map[x][y].timestamp:
+        for agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time]:
+            conflicts.add((i + agent.env.time, (x, y), agent, 0))
+    if (i + agent.env.time - 1) in agent.env.tile_map[x][y].timestamp and i > 0:
+        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time - 1]:
+            if agent.id != other_agent and len(agent.env.agents[other_agent].route) > i:
+                if agent.env.agents[other_agent].route[i - 1] == agent.route[i] and \
+                        agent.env.agents[other_agent].route[i] == agent.route[i - 1]:
+                    conflicts.add((i + agent.env.time, (x, y), agent.env.agents[other_agent], 1))
+                    print(agent.env.time + i)
+    return conflicts
+
+
 class Agent:
 
     def __init__(self, agent_id, position, env, route=None, direction=Direction.DOWN, task_handler=None):
@@ -32,10 +48,9 @@ class Agent:
             return True
         else:
             self.task = task
-            id_robot = self.env.raster_to_graph[self.position]
-            id_pod = self.env.raster_to_graph[task]
-            route_to_pod = self.env.routes[str(id_robot)][str(id_pod)]
-            route = route_to_pod
+            id_robot, id_pod = self.env.raster_to_graph[self.position], self.env.raster_to_graph[task]
+            route_to_pod, route = self.env.routes[str(id_robot)][str(id_pod)], self.env.routes[str(id_robot)][
+                str(id_pod)]
             route_to_ps = self.env.routes[str(id_pod)]
             route = route + route_to_ps
             route_to_ps.reverse()
@@ -48,21 +63,11 @@ class Agent:
         for i in range(len(self.route)):
             x, y = self.route[i]
             if (i + self.env.time) in self.env.tile_map[x][y].timestamp:
-                self.env.tile_map[x][y].timestamp[i +
-                                                  self.env.time].append(self.id)
-                for agent in self.env.tile_map[x][y].timestamp[i + self.env.time]:
-                    conflicts.add((i + self.env.time, (x, y), agent, 0))
+                self.env.tile_map[x][y].timestamp[i + self.env.time].append(self.id)
             else:
                 self.env.tile_map[x][y].timestamp[i + self.env.time] = [self.id]
+            conflicts.add(detect_conflicts(self, i))
 
-            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp and i > 0:
-                for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
-                    if self.id != other_agent and len(self.env.agents[other_agent].route) > i:
-                        if self.env.agents[other_agent].route[i - 1] == self.route[i] and \
-                                self.env.agents[other_agent].route[i] == self.route[i - 1]:
-                            conflicts.add(
-                                (i + self.env.time, (x, y), self.env.agents[other_agent], 1))
-                            print(self.env.time + i)
         return conflicts
 
     @staticmethod
@@ -74,10 +79,8 @@ class Agent:
         if bad_conflict:
 
             if self.direction[0] == 0:  # Going up or down
-                tile_left = self.env.tile_map[self.position[0] -
-                                              1][self.position[1]]
-                tile_right = self.env.tile_map[self.position[0] +
-                                               1][self.position[1]]
+                tile_left = self.env.tile_map[self.position[0] - 1][self.position[1]]
+                tile_right = self.env.tile_map[self.position[0] + 1][self.position[1]]
 
                 if tile_left.tile != Tile.WALKABLE and tile_left.tile != Tile.ROBOT:
                     to_add = [(self.position[0] + 1, self.position[1])] * shift
@@ -94,10 +97,8 @@ class Agent:
                         return self.invalidate_and_declare_route(to_add + [self.position])
             else:
 
-                tile_down = self.env.tile_map[self.position[0]
-                ][self.position[1] - 1]
-                tile_up = self.env.tile_map[self.position[0]
-                ][self.position[1] + 1]
+                tile_down = self.env.tile_map[self.position[0]][self.position[1] - 1]
+                tile_up = self.env.tile_map[self.position[0]][self.position[1] + 1]
 
                 if tile_down.tile != Tile.WALKABLE and tile_down.tile != Tile.ROBOT:
                     to_add = [(self.position[0], self.position[1] + 1)] * shift
@@ -125,7 +126,7 @@ class Agent:
 
     def skip_to(self, t):
         delta = t - self.time
-        if len(self.route) >= delta and delta >= 0:
+        if len(self.route) >= delta >= 0:
             self.log = self.log + self.route[0:delta]
             self.position = self.route[delta - 1]
             self.route = self.route[delta:]
