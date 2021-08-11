@@ -53,7 +53,8 @@ class Agent:
                 for agent in self.env.tile_map[x][y].timestamp[i + self.env.time]:
                     conflicts.add((i + self.env.time, (x, y), agent, 0))
             else:
-                self.env.tile_map[x][y].timestamp[i + self.env.time] = [self.id]
+                self.env.tile_map[x][y].timestamp[i +
+                                                  self.env.time] = [self.id]
 
             if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp and i > 0:
                 for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
@@ -87,17 +88,19 @@ class Agent:
                     return self.invalidate_and_declare_route(to_add + [self.position])
                 else:
                     if random.random() < 0.5:
-                        to_add = [(self.position[0] + 1, self.position[1])] * shift
+                        to_add = [
+                            (self.position[0] + 1, self.position[1])] * shift
                         return self.invalidate_and_declare_route(to_add + [self.position])
                     else:
-                        to_add = [(self.position[0] - 1, self.position[1])] * shift
+                        to_add = [
+                            (self.position[0] - 1, self.position[1])] * shift
                         return self.invalidate_and_declare_route(to_add + [self.position])
             else:
 
                 tile_down = self.env.tile_map[self.position[0]
-                ][self.position[1] - 1]
+                                              ][self.position[1] - 1]
                 tile_up = self.env.tile_map[self.position[0]
-                ][self.position[1] + 1]
+                                            ][self.position[1] + 1]
 
                 if tile_down.tile != Tile.WALKABLE and tile_down.tile != Tile.ROBOT:
                     to_add = [(self.position[0], self.position[1] + 1)] * shift
@@ -107,10 +110,12 @@ class Agent:
                     return self.invalidate_and_declare_route(to_add + [self.position])
                 else:
                     if random.random() < 0.5:
-                        to_add = [(self.position[0], self.position[1] + 1)] * shift
+                        to_add = [
+                            (self.position[0], self.position[1] + 1)] * shift
                         return self.invalidate_and_declare_route(to_add + [self.position])
                     else:
-                        to_add = [(self.position[0], self.position[1] - 1)] * shift
+                        to_add = [
+                            (self.position[0], self.position[1] - 1)] * shift
                         return self.invalidate_and_declare_route(to_add + [self.position])
         else:
             steps = [self.route[0]] * shift
@@ -125,26 +130,27 @@ class Agent:
 
     def skip_to(self, t):
         delta = t - self.time
-        if len(self.route) >= delta and delta >= 0:
-            self.log = self.log + self.route[0:delta]
-            self.position = self.route[delta - 1]
-            self.route = self.route[delta:]
-            if len(self.route) > 1:
-                self.direction = (
-                    self.route[0][0] - self.route[1][0], self.route[0][1] - self.route[0][1])
+        if delta > 0:
+            if len(self.route) >= delta and delta >= 0:
+                self.log = self.log + self.route[0:delta]
+                self.position = self.route[delta - 1]
+                self.route = self.route[delta:]
+                if len(self.route) > 1:
+                    self.direction = (
+                        self.route[0][0] - self.route[1][0], self.route[0][1] - self.route[0][1])
+                else:
+                    self.direction = (0, 0)
             else:
+                self.position = self.route[-1] if self.route else self.home
+                if len(self.route) > 0:
+                    self.log = self.log + self.route
+                    print("time")
+                    print(self.time)
+                    print("skip to")
+                    print(t)
+                    print()
+                else:
+                    self.log.append(self.position)
+                self.route = []
                 self.direction = (0, 0)
-        else:
-            self.position = self.route[-1] if self.route else self.home
-            if len(self.route) > 0:
-                self.log = self.log + self.route
-                print("time")
-                print(self.time)
-                print("skip to")
-                print(t)
-                print()
-            else:
-                self.log.append(self.position)
-            self.route = []
-            self.direction = (0, 0)
-        self.time = t
+            self.time = t
