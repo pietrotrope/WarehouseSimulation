@@ -23,7 +23,6 @@ class Environment:
         self.graph = None
         self.agents = {}
         self.raster_to_graph = {}
-        self.__id = 0
         self.__load_map(map_path)
         self.__gen_graph()
         self.task_handler = TaskHandler(self, task_number)
@@ -52,8 +51,12 @@ class Environment:
             agent.time = 0
             agent.log = [agent.position]
             agent.task_handler = self.task_handler
+        for x in range(len(self.tile_map)):
+            for y in range(len(self.tile_map[x])):
+                self.tile_map[x][y].timestamp = {}
         if run:
             self.run()
+        
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -202,7 +205,6 @@ class Environment:
                 if self.save:
                     self.save_data()
                 break
-            pass
 
     def save_data(self):
         res = []
@@ -218,8 +220,8 @@ class Environment:
 
         # TODO Problema assegnazione task contemporanea stessa cella
 
-        # if flag:
-        # new_conflicts = new_conflicts.union(agent.shift_route(2, True))
+        #if flag:
+            #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(2, True))
 
         """
         if len(priorities) == 2:

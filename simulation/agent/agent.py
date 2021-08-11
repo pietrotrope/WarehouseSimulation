@@ -37,6 +37,25 @@ class Agent:
             route_to_pod = self.env.routes[str(id_robot)][str(id_pod)]
             route = route_to_pod
             route_to_ps = self.env.routes[str(id_pod)]
+
+            print()
+            print(route_to_pod[-1])
+            print(route_to_ps[0])
+            print(self.env.key_to_raster(route_to_pod[-1]))
+            print(self.env.key_to_raster(route_to_ps[0]))
+            print(self.env.key_to_raster(route_to_pod[-1])[0][0])
+            print(self.env.key_to_raster(route_to_ps[0])[0][0])
+            print(self.env.key_to_raster(route_to_pod[-1])[0][1])
+            print(self.env.key_to_raster(route_to_ps[0])[0][1])
+            print()
+
+
+            if abs(self.env.key_to_raster(route_to_pod[-1])[0][0]-self.env.key_to_raster(route_to_ps[0])[0][0]) > 2 or abs(self.env.key_to_raster(route_to_pod[-1])[0][1]-self.env.key_to_raster(route_to_ps[0])[0][1]) > 2:
+                print()
+                print(route_to_pod[-1])
+                print(route_to_ps[0])
+                print()
+
             route = route + route_to_ps
             route_to_ps.reverse()
             route = route + route_to_ps
@@ -47,22 +66,22 @@ class Agent:
         conflicts = set()
         for i in range(len(self.route)):
             x, y = self.route[i]
-            if (i + self.env.time) in self.env.tile_map[x][y].timestamp:
+            if (i + self.env.time+1) in self.env.tile_map[x][y].timestamp:
                 self.env.tile_map[x][y].timestamp[i +
-                                                  self.env.time].append(self.id)
-                for agent in self.env.tile_map[x][y].timestamp[i + self.env.time]:
-                    conflicts.add((i + self.env.time, (x, y), agent, 0))
+                                                  self.env.time+1].append(self.id)
+                if len(self.env.tile_map[x][y].timestamp[i + self.env.time+1])>1:
+                    for agent in self.env.tile_map[x][y].timestamp[i + self.env.time+1]:
+                        conflicts.add((i + self.env.time+1, (x, y), agent, 0))
             else:
                 self.env.tile_map[x][y].timestamp[i +
-                                                  self.env.time] = [self.id]
+                                                  self.env.time+1] = [self.id]
 
-            if (i + self.env.time - 1) in self.env.tile_map[x][y].timestamp and i > 0:
-                for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time - 1]:
+            if (i + self.env.time+1) in self.env.tile_map[x][y].timestamp and i > 0:
+                for other_agent in self.env.tile_map[x][y].timestamp[i + self.env.time+1]:
                     if self.id != other_agent and len(self.env.agents[other_agent].route) > i:
-                        if self.env.agents[other_agent].route[i - 1] == self.route[i] and \
-                                self.env.agents[other_agent].route[i] == self.route[i - 1]:
+                        if self.env.agents[other_agent].route[i] == self.route[i-1]:
                             conflicts.add(
-                                (i + self.env.time, (x, y), self.env.agents[other_agent], 1))
+                                (i + self.env.time, (x, y), other_agent, 1))
                             print(self.env.time + i)
         return conflicts
 
@@ -124,14 +143,14 @@ class Agent:
     def invalidate_and_declare_route(self, steps):
         t = self.env.time
         for i, (x, y) in enumerate(self.route):
-            self.env.tile_map[x][y].timestamp[i + t].remove(self.id)
+            self.env.tile_map[x][y].timestamp[i + t+1].remove(self.id)
         self.route = steps + self.route
         return self.declare_route()
 
     def skip_to(self, t):
         delta = t - self.time
         if delta > 0:
-            if len(self.route) >= delta and delta >= 0:
+            if len(self.route) >= delta:
                 self.log = self.log + self.route[0:delta]
                 self.position = self.route[delta - 1]
                 self.route = self.route[delta:]
@@ -144,11 +163,6 @@ class Agent:
                 self.position = self.route[-1] if self.route else self.home
                 if len(self.route) > 0:
                     self.log = self.log + self.route
-                    print("time")
-                    print(self.time)
-                    print("skip to")
-                    print(t)
-                    print()
                 else:
                     self.log.append(self.position)
                 self.route = []
