@@ -1,3 +1,4 @@
+from random import Random, random
 import sys
 
 import pandas as pd
@@ -5,7 +6,7 @@ import numpy as np
 import csv
 import json
 
-from simulation.agent.agent import Agent
+from simulation.agent.agent import Agent, detect_conflicts
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
@@ -180,7 +181,7 @@ class Environment:
                     conflicts = conflicts.union(agent.declare_route())
                 task_ends[i] = self.time + \
                                len(agent.route) if not done[i] else sys.maxsize
-            if conflicts:
+            if conflicts:              
                 conflict_time = min(conflicts, key=lambda t: t[0])[0]
                 if conflict_time > min(task_ends):
                     self.time = min(task_ends)
@@ -218,10 +219,15 @@ class Environment:
         time, pos, agent, flag = conflict
         new_conflicts = set()
 
+        #i = time-self.time
+        #conflicts = set()
+        #if len(self.agents[agent].route)>i:
+            #conflicts = detect_conflicts(self.agents[agent],i)
+
         # TODO Problema assegnazione task contemporanea stessa cella
 
-        #if flag:
-            #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(2, True))
+        #if flag and len([item for item in conflicts if item[0] == time and item[2]!=agent])>0:
+            #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
 
         """
         if len(priorities) == 2:

@@ -13,16 +13,17 @@ movement = {
 def detect_conflicts(agent, i):
     x, y = agent.route[i]
     conflicts = set()
-    if (i + agent.env.time) in agent.env.tile_map[x][y].timestamp:
+
+    if (i + agent.env.time +1) in agent.env.tile_map[x][y].timestamp:
         if len(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]) > 1:
-            for agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time]:
-                conflicts.add((i + agent.env.time, (x, y), agent, 0))
-    if (i + agent.env.time - 1) in agent.env.tile_map[x][y].timestamp and i > 0:
-        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time - 1]:
+            for agent_id in agent.env.tile_map[x][y].timestamp[i + agent.env.time +1]:
+                conflicts.add((i + agent.env.time +1, (x, y), agent_id, 0))
+
+    if (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp and i > 0:
+        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]:
             if agent.id != other_agent and len(agent.env.agents[other_agent].route) > i:
-                if agent.env.agents[other_agent].route[i - 1] == agent.route[i] and \
-                        agent.env.agents[other_agent].route[i] == agent.route[i - 1]:
-                    conflicts.add((i + agent.env.time, (x, y), agent.env.agents[other_agent], 1))
+                if agent.env.agents[other_agent].route[i] == agent.route[i-1]:
+                    conflicts.add((i + agent.env.time, (x, y), other_agent, 1))
                     print(agent.env.time + i)
     return conflicts
 
@@ -70,7 +71,7 @@ class Agent:
                 self.env.tile_map[x][y].timestamp[i + self.env.time + 1].append(self.id)
             else:
                 self.env.tile_map[x][y].timestamp[i + self.env.time + 1] = [self.id]
-            conflicts.add(detect_conflicts(self, i))
+            conflicts = conflicts.union(detect_conflicts(self, i))
         return conflicts
 
     @staticmethod
