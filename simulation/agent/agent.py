@@ -32,31 +32,14 @@ class Agent:
             return True
         else:
             self.task = task
-            id_robot = self.env.raster_to_graph[self.position]
-            id_pod = self.env.raster_to_graph[task]
-            route_to_pod = self.env.routes[str(id_robot)][str(id_pod)]
+            id_robot = str(self.env.raster_to_graph[self.position])
+            id_pod = str(self.env.raster_to_graph[task])
+            route_to_pod = self.env.routes[id_robot][id_pod]
+            if route_to_pod == []:
+                route_to_pod = [self.env.raster_to_graph[self.position]]
             route = route_to_pod
-            route_to_ps = self.env.routes[str(id_pod)]
-
-            print()
-            print(route_to_pod[-1])
-            print(route_to_ps[0])
-            print(self.env.key_to_raster(route_to_pod[-1]))
-            print(self.env.key_to_raster(route_to_ps[0]))
-            print(self.env.key_to_raster(route_to_pod[-1])[0][0])
-            print(self.env.key_to_raster(route_to_ps[0])[0][0])
-            print(self.env.key_to_raster(route_to_pod[-1])[0][1])
-            print(self.env.key_to_raster(route_to_ps[0])[0][1])
-            print()
-
-
-            if abs(self.env.key_to_raster(route_to_pod[-1])[0][0]-self.env.key_to_raster(route_to_ps[0])[0][0]) > 2 or abs(self.env.key_to_raster(route_to_pod[-1])[0][1]-self.env.key_to_raster(route_to_ps[0])[0][1]) > 2:
-                print()
-                print(route_to_pod[-1])
-                print(route_to_ps[0])
-                print()
-
-            route = route + route_to_ps
+            route_to_ps = self.env.routes[id_pod].copy()
+            route = route + route_to_ps.copy()
             route_to_ps.reverse()
             route = route + route_to_ps
             self.route = [self.env.key_to_raster(cell)[0] for cell in route]
