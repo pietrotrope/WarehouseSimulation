@@ -4,19 +4,21 @@ import random
 
 def detect_conflicts(agent, i):
     x, y = agent.route[i]
+    check = (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp
     conflicts = set()
-
-    if (i + agent.env.time +1) in agent.env.tile_map[x][y].timestamp:
+    if check:
         if len(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]) > 1:
-            for agent_id in agent.env.tile_map[x][y].timestamp[i + agent.env.time +1]:
-                conflicts.add((i + agent.env.time +1, (x, y), agent_id, 0))
+            tmp = set([(i + agent.env.time + 1, (x, y), agent_id, 0)
+                       for agent_id in agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]])
+            conflicts = conflicts.union(tmp)
 
-    if (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp and i > 0:
-        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time]:
-            if agent.id != other_agent and len(agent.env.agents[other_agent].route) > i:
-                if agent.env.agents[other_agent].route[i] == agent.route[i-1]:
-                    conflicts.add((i + agent.env.time+1, (x, y), other_agent, 1))
-                    print(i + agent.env.time+1)
+        if i > 0:
+            tmp = set([(i + agent.env.time + 1, (x, y), other_agent, 1)
+                       for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time]
+                       if agent.id != other_agent and len(agent.env.agents[other_agent].route) > i
+                       if agent.env.agents[other_agent].route[i] == agent.route[i - 1]
+                       ])
+            conflicts = conflicts.union(tmp)
     return conflicts
 
 
@@ -45,11 +47,11 @@ class Agent:
             id_robot = str(self.env.raster_to_graph[self.position])
             id_pod = str(self.env.raster_to_graph[task])
             route_to_pod = self.env.routes[id_robot][id_pod]
-            if route_to_pod == []:
+            if not route_to_pod:
                 route_to_pod = [self.env.raster_to_graph[self.position]]
             route = route_to_pod
-            #TODO se route_to_pod[-1]!=route_to_ps[0] aggiungi 2 step, uno uguale a route_to_pod[-1] ed uno che porta alla cella vicino a
-            # route_to_ps[0]
+            # TODO se route_to_pod[-1]!=route_to_ps[0] aggiungi 2 step, uno uguale a route_to_pod[-1] ed uno che
+            #  porta alla cella vicino a route_to_ps[0]
             route_to_ps = self.env.routes[id_pod].copy()
             route = route + route_to_ps.copy()
             route_to_ps.reverse()
@@ -86,6 +88,10 @@ class Agent:
                     else:
                         to_add = [(self.position[0] - 1, self.position[1])] * shift
             else:
+<<<<<<< HEAD
+=======
+
+>>>>>>> f37bdcdd75cb6ac09f67c35b7faaf89f16bbbefa
                 tile_down = self.env.tile_map[self.position[0]][self.position[1] - 1]
                 tile_up = self.env.tile_map[self.position[0]][self.position[1] + 1]
 
