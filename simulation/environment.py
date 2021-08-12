@@ -58,7 +58,6 @@ class Environment:
                 self.tile_map[x][y].timestamp = defaultdict(list)
         if run:
             self.run()
-        
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -75,11 +74,10 @@ class Environment:
         return len(picking_stations_columns)
 
     def get_pods(self):
-        pods = []
-        for i, line in enumerate(self.raster_map):
-            for j, cell in enumerate(line):
-                if cell == Tile.POD.value:
-                    pods.append((i, j))
+        pods = [(i, j)
+                for i, line in enumerate(self.raster_map)
+                for j, cell in enumerate(line)
+                if cell == Tile.POD.value]
         return pods
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
@@ -149,25 +147,16 @@ class Environment:
                     self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
 
         for picking_station in picking_stations:
-            node = self.graph.get_node(
-                self.raster_to_graph[picking_station[0]])
+            node = self.graph.get_node(self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
 
     def __gen_tile_map(self):
         self.tile_map = np.zeros_like(self.raster_map).tolist()
-        for i, row in enumerate(self.raster_map):
-            for j, cell in enumerate(row):
-                self.tile_map[i][j] = Cell(Tile(cell))
+        self.tile_map = [[Cell(Tile(cell)) for j, cell in enumerate(row)] for i, row in enumerate(self.raster_map)]
 
     def __spawn_agents(self, cfg_path):
         positions = self.agents
-        self.agents = []
-
-        for i in range(len(positions)):
-            agent = Agent(i, positions[i], self,
-                          task_handler=self.task_handler)
-
-            self.agents.append(agent)
+        self.agents = [Agent(i, positions[i], self, task_handler=self.task_handler) for i in range(len(positions))]
 
     def run(self):
         conflicts = set()
@@ -182,7 +171,7 @@ class Environment:
                     conflicts = conflicts.union(agent.declare_route())
                 task_ends[i] = self.time + \
                                len(agent.route) if not done[i] else sys.maxsize
-            if conflicts:              
+            if conflicts:
                 conflict_time = min(conflicts, key=lambda t: t[0])[0]
                 if conflict_time > min(task_ends):
                     self.time = min(task_ends)
@@ -209,9 +198,7 @@ class Environment:
                 break
 
     def save_data(self):
-        res = []
-        for agent in self.agents:
-            res.append(agent.log)
+        res = [agent.log for agent in self.agents]
         with open("./out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
