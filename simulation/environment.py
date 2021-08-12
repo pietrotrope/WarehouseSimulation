@@ -1,11 +1,10 @@
-from random import Random, random
 import sys
 
 import pandas as pd
 import numpy as np
 import csv
 import json
-from collections import defaultdict
+from itertools import count
 
 from simulation.agent.agent import Agent, detect_conflicts
 from simulation.agent.task_handler import TaskHandler
@@ -27,6 +26,7 @@ class Environment:
         self.raster_to_graph = {}
         self.__load_map(map_path)
         self.__gen_graph()
+        self.pods = self._get_pods()
         self.task_handler = TaskHandler(self, task_number)
         self.__spawn_agents(cfg_path)
         self.time = 0
@@ -34,6 +34,7 @@ class Environment:
         self.task_number = task_number
         self.agent_number = agent_number
         self.save = save
+        
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
@@ -43,9 +44,11 @@ class Environment:
         if run:
             self.run()
 
-    def new_simulation(self, task_number=50, run=True):
+    def new_simulation(self, task_number=50, run=True, save=False):
         self.time = 0
-        self.task_handler = TaskHandler(self, task_number)
+        self.task_number = task_number
+        self.task_handler.new_task_pool(task_number)
+        self.save=save
         for agent in self.agents:
             agent.position = agent.home
             agent.task = None
@@ -53,11 +56,12 @@ class Environment:
             agent.time = 0
             agent.log = [agent.position]
             agent.task_handler = self.task_handler
-        for x in range(len(self.tile_map)):
-            for y in range(len(self.tile_map[x])):
-                self.tile_map[x][y].timestamp = defaultdict(list)
+        for x in range(self.map_shape[0]):
+            for y in range(self.map_shape[1]):
+                self.tile_map[x][y].timestamp.clear()
         if run:
             self.run()
+        
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -73,12 +77,17 @@ class Environment:
             x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
-    def get_pods(self):
-        pods = [(i, j)
-                for i, line in enumerate(self.raster_map)
-                for j, cell in enumerate(line)
-                if cell == Tile.POD.value]
+    
+    def _get_pods(self):
+        pods = []
+        for i, line in enumerate(self.raster_map):
+            for j, cell in enumerate(line):
+                if cell == Tile.POD.value:
+                    pods.append((i, j))
         return pods
+    
+    def get_pods(self):
+        return self.pods
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
         if coord is not None:
@@ -147,22 +156,31 @@ class Environment:
                     self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
 
         for picking_station in picking_stations:
-            node = self.graph.get_node(self.raster_to_graph[picking_station[0]])
+            node = self.graph.get_node(
+                self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
 
     def __gen_tile_map(self):
         self.tile_map = np.zeros_like(self.raster_map).tolist()
-        self.tile_map = [[Cell(Tile(cell)) for j, cell in enumerate(row)] for i, row in enumerate(self.raster_map)]
+        for i, row in enumerate(self.raster_map):
+            for j, cell in enumerate(row):
+                self.tile_map[i][j] = Cell(Tile(cell))
 
     def __spawn_agents(self, cfg_path):
         positions = self.agents
-        self.agents = [Agent(i, positions[i], self, task_handler=self.task_handler) for i in range(len(positions))]
+        self.agents = []
+
+        for i in range(len(positions)):
+            agent = Agent(i, positions[i], self,
+                          task_handler=self.task_handler)
+
+            self.agents.append(agent)
 
     def run(self):
         conflicts = set()
         task_ends = [0 for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
-        while True:
+        for simulation_time in count(0):
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
@@ -171,7 +189,7 @@ class Environment:
                     conflicts = conflicts.union(agent.declare_route())
                 task_ends[i] = self.time + \
                                len(agent.route) if not done[i] else sys.maxsize
-            if conflicts:
+            if conflicts:              
                 conflict_time = min(conflicts, key=lambda t: t[0])[0]
                 if conflict_time > min(task_ends):
                     self.time = min(task_ends)
@@ -198,7 +216,9 @@ class Environment:
                 break
 
     def save_data(self):
-        res = [agent.log for agent in self.agents]
+        res = []
+        for agent in self.agents:
+            res.append(agent.log)
         with open("./out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
@@ -209,8 +229,8 @@ class Environment:
 
         # TODO Problema assegnazione task contemporanea stessa cella
 
-        if flag:
-            new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
+        #if flag:
+            #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
 
         """
         if len(priorities) == 2:
