@@ -33,7 +33,6 @@ class Screen:
                                      self.tileSize - 1))
 
     def draw(self):
-        self.update_map(-1, -1)
         for x in range(len(self.map)):
             for y in range(len(self.map[0])):
                 self.draw_square_(x, y, tileColor[self.map[x][y]])
@@ -49,13 +48,14 @@ class Screen:
                 self.map[pos[0]][pos[1]] = 0
                 pos2 = literal_eval(agent[after])
                 self.map[pos2[0]][pos2[1]] = 1
+
     def run(self):
         i = -1
         tmp = -1
         while not self.done:
             self.clock.tick(100)
             self.draw_frame()
-            if tmp!=i:
+            if tmp != i:
                 print(i)
                 tmp = i
 

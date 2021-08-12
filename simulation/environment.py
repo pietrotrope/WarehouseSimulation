@@ -222,8 +222,8 @@ class Environment:
 
         # TODO Problema assegnazione task contemporanea stessa cella
 
-        #if flag:
-            #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
+        if flag:
+            new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
 
         """
         if len(priorities) == 2:
