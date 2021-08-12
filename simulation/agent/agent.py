@@ -20,11 +20,11 @@ def detect_conflicts(agent, i):
                 conflicts.add((i + agent.env.time +1, (x, y), agent_id, 0))
 
     if (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp and i > 0:
-        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]:
+        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time]:
             if agent.id != other_agent and len(agent.env.agents[other_agent].route) > i:
                 if agent.env.agents[other_agent].route[i] == agent.route[i-1]:
-                    conflicts.add((i + agent.env.time, (x, y), other_agent, 1))
-                    print(agent.env.time + i)
+                    conflicts.add((i + agent.env.time+1, (x, y), other_agent, 1))
+                    print(i + agent.env.time+1)
     return conflicts
 
 
@@ -56,6 +56,8 @@ class Agent:
             if route_to_pod == []:
                 route_to_pod = [self.env.raster_to_graph[self.position]]
             route = route_to_pod
+            #TODO se route_to_pod[-1]!=route_to_ps[0] aggiungi 2 step, uno uguale a route_to_pod[-1] ed uno che porta alla cella vicino a
+            # route_to_ps[0]
             route_to_ps = self.env.routes[id_pod].copy()
             route = route + route_to_ps.copy()
             route_to_ps.reverse()
@@ -67,10 +69,7 @@ class Agent:
         conflicts = set()
         for i in range(len(self.route)):
             x, y = self.route[i]
-            if (i + self.env.time + 1) in self.env.tile_map[x][y].timestamp:
-                self.env.tile_map[x][y].timestamp[i + self.env.time + 1].append(self.id)
-            else:
-                self.env.tile_map[x][y].timestamp[i + self.env.time + 1] = [self.id]
+            self.env.tile_map[x][y].timestamp[i + self.env.time + 1].append(self.id)
             conflicts = conflicts.union(detect_conflicts(self, i))
         return conflicts
 

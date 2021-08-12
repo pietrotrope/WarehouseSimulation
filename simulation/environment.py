@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import csv
 import json
+from collections import defaultdict
 
 from simulation.agent.agent import Agent, detect_conflicts
 from simulation.agent.task_handler import TaskHandler
@@ -54,7 +55,7 @@ class Environment:
             agent.task_handler = self.task_handler
         for x in range(len(self.tile_map)):
             for y in range(len(self.tile_map[x])):
-                self.tile_map[x][y].timestamp = {}
+                self.tile_map[x][y].timestamp = defaultdict(list)
         if run:
             self.run()
         
@@ -219,14 +220,9 @@ class Environment:
         time, pos, agent, flag = conflict
         new_conflicts = set()
 
-        #i = time-self.time
-        #conflicts = set()
-        #if len(self.agents[agent].route)>i:
-            #conflicts = detect_conflicts(self.agents[agent],i)
-
         # TODO Problema assegnazione task contemporanea stessa cella
 
-        #if flag and len([item for item in conflicts if item[0] == time and item[2]!=agent])>0:
+        #if flag:
             #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
 
         """
