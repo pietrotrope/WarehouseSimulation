@@ -1,22 +1,25 @@
 from simulation.tile import Tile
 from .direction import Direction
 import random
+import time
 
-def detect_conflicts(agent, i):
+
+def detect_possible_conflict(agent, i):
     x, y = agent.route[i]
-    conflicts = set()
 
     if (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp:
-        if len(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]) > 1:
-            for agent_id in agent.env.tile_map[x][y].timestamp[i + agent.env.time +1]:
-                conflicts.add((i + agent.env.time +1, (x, y), agent_id, 0))
+        if len(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]) != 0:
+            other_agent = agent.env.agents[agent.env.tile_map[x][y].timestamp[i +
+                                                                              agent.env.time + 1][0]]
+            if i>0 and len(other_agent.route)>i+1 and other_agent.route[i+1] == agent.route[i-1]:
+                return (i+agent.env.time, agent.id, 1, 0)        
+            return (i+agent.env.time, agent.id, 0, 0)
 
-    if (i + agent.env.time) in agent.env.tile_map[x][y].timestamp and i > 0:
-        for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time]:
-            if agent.id != other_agent and len(agent.env.agents[other_agent].route) > i:
-                if agent.env.agents[other_agent].route[i] == agent.route[i-1]:
-                    conflicts.add((i + agent.env.time+1, (x, y), other_agent, 1))
-    return conflicts
+    for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time + 2]:
+        if agent.id != other_agent and i>0:
+            if agent.env.agents[other_agent].route[i+1] == agent.route[i]:
+                return (i+agent.env.time, agent.id, 1, 1)
+    return None
 
 
 class Agent:
@@ -47,68 +50,99 @@ class Agent:
             if not route_to_pod:
                 route_to_pod = [self.env.raster_to_graph[self.position]]
             route = route_to_pod
-            #TODO se route_to_pod[-1]!=route_to_ps[0] aggiungi 2 step, uno uguale a route_to_pod[-1] ed uno che porta alla cella vicino a
+            # TODO se route_to_pod[-1]!=route_to_ps[0] aggiungi 2 step, uno uguale a route_to_pod[-1] ed uno che porta alla cella vicino a
             # route_to_ps[0]
             route_to_ps = self.env.routes[id_pod].copy()
-            route = [*route,*route_to_ps.copy()]
+            route = [*route, *route_to_ps.copy()]
             route_to_ps.reverse()
-            route = [*route,*route_to_ps]
+            route = [*route, *route_to_ps]
             self.route = [self.env.key_to_raster(cell)[0] for cell in route]
             return False
 
-    def declare_route(self):
-        conflicts = set()
-        for i in range(len(self.route)):
+    def declare_route(self, pos=0):
+        for i in range(pos, len(self.route)):
+            conflict = detect_possible_conflict(self, i)
+            if conflict:
+
+                return conflict
             x, y = self.route[i]
-            self.env.tile_map[x][y].timestamp[i + self.env.time + 1].append(self.id)
-            conflicts = conflicts.union(detect_conflicts(self, i))
-        return conflicts
+            self.env.tile_map[x][y].timestamp[i +
+                                              self.env.time + 1].append(self.id)
 
-    @staticmethod
-    def get_priority():
-        return random.random()
+        return None
 
-    def shift_route(self, shift, bad_conflict):
-        to_add=[]
+    def shift_route(self, i, shift, bad_conflict):
+        to_add = []
         if bad_conflict:
-            if self.direction[0] == 0:  # Going up or down
-                tile_left = self.env.tile_map[self.position[0] - 1][self.position[1]]
-                tile_right = self.env.tile_map[self.position[0] + 1][self.position[1]]
+            
+            direction=(0,0)
+            if i>0 and i<len(self.route):          
+                direction = (abs(self.route[i-1][0]-self.route[i][0]),
+                            abs(self.route[i-1][1]-self.route[i][1]))
 
-                if tile_left.tile != Tile.WALKABLE and tile_left.tile != Tile.ROBOT:
-                    to_add = [(self.position[0] + 1, self.position[1])] * shift
-                elif tile_right.tile != Tile.WALKABLE and tile_right.tile != Tile.ROBOT:
-                    to_add = [(self.position[0] - 1, self.position[1])] * shift
-                else:
-                    if random.random() < 0.5:
-                        to_add = [(self.position[0] + 1, self.position[1])] * shift
+            if direction[0] == 0 and direction[1] != 0:  # go up or down
+                new_i = i
+                while new_i > 0:
+                    pos = self.route[new_i-1]
+                    tmap = self.env.tile_map
+                    if pos[1]-1 >= 0 and not tmap[pos[0]][pos[1]-1].timestamp[new_i + self.env.time] and tmap[pos[0]][pos[1]-1].tile == Tile.WALKABLE:
+                        to_add = [(pos[0], pos[1]-1)
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i-1, to_add)
+                    elif pos[1]+1 < self.env.map_shape[1] and not tmap[pos[0]][pos[1]+1].timestamp[new_i + self.env.time] and tmap[pos[0]][pos[1]+1].tile == Tile.WALKABLE:
+                        to_add = [(pos[0], pos[1]+1)
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i-1, to_add)
                     else:
-                        to_add = [(self.position[0] - 1, self.position[1])] * shift
+                        new_i -= 1
+            elif direction[0] != 0 and direction[1] == 0:
+                new_i = i
+                while new_i > 0:
+                    pos = self.route[new_i-1]
+                    tmap = self.env.tile_map
+                    if pos[0]-1 >= 0 and not tmap[pos[0]-1][pos[1]].timestamp[new_i + self.env.time] and tmap[pos[0]-1][pos[1]].tile == Tile.WALKABLE:
+                        to_add = [(pos[0]-1, pos[1])
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i -1, to_add)
+                    elif pos[0]+1 < self.env.map_shape[0] and not tmap[pos[0]+1][pos[1]].timestamp[new_i + self.env.time] and tmap[pos[0]+1][pos[1]].tile == Tile.WALKABLE:
+                        to_add = [(pos[0]+1, pos[1])
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i -1, to_add)
+                    else:
+                        new_i -= 1
             else:
-                tile_down = self.env.tile_map[self.position[0]][self.position[1] - 1]
-                tile_up = self.env.tile_map[self.position[0]][self.position[1] + 1]
-
-                if tile_down.tile != Tile.WALKABLE and tile_down.tile != Tile.ROBOT:
-                    to_add = [(self.position[0], self.position[1] + 1)] * shift
-                elif tile_up.tile != Tile.WALKABLE and tile_up.tile != Tile.ROBOT:
-                    to_add = [(self.position[0], self.position[1] - 1)] * shift
-                else:
-                    if random.random() < 0.5:
-                        to_add = [(self.position[0], self.position[1] + 1)] * shift
+                new_i = i
+                while new_i > 0:
+                    pos = self.route[new_i-1 -self.env.time]
+                    tmap = self.env.tile_map
+                    if pos[1]-1 >= 0 and not tmap[pos[0]][pos[1]-1].timestamp[new_i + self.env.time] and tmap[pos[0]][pos[1]-1].tile == Tile.WALKABLE:
+                        to_add = [(pos[0], pos[1]-1)
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i-1, to_add)
+                    elif pos[1]+1 < self.env.map_shape[1] and not tmap[pos[0]][pos[1]+1].timestamp[new_i + self.env.time] and tmap[pos[0]][pos[1]+1].tile == Tile.WALKABLE:
+                        to_add = [(pos[0], pos[1]+1)
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i-1, to_add)
+                    elif pos[0]-1 >= 0 and not tmap[pos[0]-1][pos[1]].timestamp[new_i + self.env.time] and tmap[pos[0]-1][pos[1]].tile == Tile.WALKABLE:
+                        to_add = [(pos[0]-1, pos[1])
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i -1, to_add)
+                    elif pos[0]+1 < self.env.map_shape[0] and not tmap[pos[0]+1][pos[1]].timestamp[new_i + self.env.time] and tmap[pos[0]+1][pos[1]].tile == Tile.WALKABLE:
+                        to_add = [(pos[0]+1, pos[1])
+                                  for _ in range(shift + i - new_i)] + [pos]
+                        return self.edit_route(new_i -1, to_add)
                     else:
-                        to_add = [(self.position[0], self.position[1] - 1)] * shift
-
-            return self.invalidate_and_declare_route(to_add + [self.position])
+                        new_i -= 1
         else:
-            to_add = [self.position] * shift
-        return self.invalidate_and_declare_route(to_add)
+            j = 1
+            while i-j >= 0 and self.route[i-j-self.env.time] == self.route[i-self.env.time]:
+                j += 1
+            to_add = [self.route[i-j-self.env.time] for _ in range(shift+j-1)]
+            return self.edit_route(i-j-self.env.time, to_add)
 
-    def invalidate_and_declare_route(self, steps):
-        t = self.env.time
-        for i, (x, y) in enumerate(self.route):
-            self.env.tile_map[x][y].timestamp[i + t + 1].remove(self.id)
-        self.route[0:0] = steps
-        return self.declare_route()
+    def edit_route(self, i, steps):
+        self.route = self.route[0:i] + steps + self.route[i:]
+
 
     def skip_to(self, t):
         delta = t - self.time

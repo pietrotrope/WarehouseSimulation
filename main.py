@@ -1,6 +1,7 @@
 from os import stat
 import random
 from numpy.lib.function_base import average
+from numpy.lib.npyio import save
 from simulation.environment import Environment
 import time
 import statistics
@@ -14,9 +15,9 @@ if __name__ == '__main__':
     print("done in {} seconds".format(end))
     
     times = []
-    for i in range(1000):
+    for i in range(10):
         s = time.time()
-        e.new_simulation(save=False, task_number=50)
+        e.new_simulation(task_number=50, save=True)
         end = time.time() - s
         times.append(end)
     print(statistics.mean(times))

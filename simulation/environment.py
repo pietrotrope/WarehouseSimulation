@@ -6,7 +6,7 @@ import csv
 import json
 from itertools import count
 
-from simulation.agent.agent import Agent, detect_conflicts
+from simulation.agent.agent import Agent, detect_possible_conflict
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
@@ -34,7 +34,6 @@ class Environment:
         self.task_number = task_number
         self.agent_number = agent_number
         self.save = save
-        
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
@@ -48,7 +47,7 @@ class Environment:
         self.time = 0
         self.task_number = task_number
         self.task_handler.new_task_pool(task_number)
-        self.save=save
+        self.save = save
         for agent in self.agents:
             agent.position = agent.home
             agent.task = None
@@ -61,7 +60,6 @@ class Environment:
                 self.tile_map[x][y].timestamp.clear()
         if run:
             self.run()
-        
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -77,7 +75,6 @@ class Environment:
             x for x in picking_stations_columns if x != []]
         return len(picking_stations_columns)
 
-    
     def _get_pods(self):
         pods = []
         for i, line in enumerate(self.raster_map):
@@ -85,7 +82,7 @@ class Environment:
                 if cell == Tile.POD.value:
                     pods.append((i, j))
         return pods
-    
+
     def get_pods(self):
         return self.pods
 
@@ -111,8 +108,8 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-                      (np.count_nonzero(self.raster_map == 4) -
-                       picking_station_number)
+            (np.count_nonzero(self.raster_map == 4) -
+             picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -177,8 +174,7 @@ class Environment:
             self.agents.append(agent)
 
     def run(self):
-        conflicts = set()
-        task_ends = [0 for _ in range(self.agent_number)]
+        task_ends = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
         for simulation_time in count(0):
             for i, agent in enumerate(self.agents):
@@ -186,29 +182,17 @@ class Environment:
                     done[i] = agent.get_task()
                     if done[i]:
                         agent.position = agent.home
-                    conflicts = conflicts.union(agent.declare_route())
-                task_ends[i] = self.time + \
-                               len(agent.route) if not done[i] else sys.maxsize
-            if conflicts:              
-                conflict_time = min(conflicts, key=lambda t: t[0])[0]
-                if conflict_time > min(task_ends):
-                    self.time = min(task_ends)
-                    for agent in self.agents:
-                        agent.skip_to(self.time)
-                    continue
+                        task_ends[i] = sys.maxsize
+                    else:
+                        conflict = agent.declare_route()
+                        while conflict:
+                            self.solve_conflict(conflict)
+                            conflict = agent.declare_route(conflict[0])
+                        task_ends[i] = self.time + len(agent.route)
 
-                self.time = conflict_time - 1
-                for agent in self.agents:
-                    agent.skip_to(self.time)
-
-                while conflict_time in list(map(lambda x: x[0], conflicts)):
-                    first_conflict = min(conflicts, key=lambda t: t[0])
-                    conflicts = conflicts.union(self.solve_conflict(first_conflict))
-                    conflicts.remove(first_conflict)
-            else:
-                self.time = min(task_ends)
-                for agent in self.agents:
-                    agent.skip_to(self.time)
+            self.time = min(task_ends)
+            for agent in self.agents:
+                agent.skip_to(self.time)
 
             if done.count(True) == len(done):
                 if self.save:
@@ -224,39 +208,8 @@ class Environment:
             wr.writerows(res)
 
     def solve_conflict(self, conflict):
-        time, pos, agent, flag = conflict
-        new_conflicts = set()
-
-        # TODO Problema assegnazione task contemporanea stessa cella
-
-        #if flag:
-            #new_conflicts = new_conflicts.union(self.agents[agent].shift_route(1, True))
-
-        """
-        if len(priorities) == 2:
-            priority_agent = max(priorities)[1]
-            for agent in agents:
-                if agent is not priority_agent and len(self.agents[agent].route) > 0:
-                    tmp_pos = self.agents[agent].position
-                    if time in self.tile_map[tmp_pos[0]][tmp_pos[1]].timestamp:
-                        overlap_path_agents = self.tile_map[tmp_pos[0]
-                                                            ][tmp_pos[1]].timestamp[time]
-
-                        new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
-                            2, priority_agent in overlap_path_agents))
-                    else:
-                        new_conflicts = new_conflicts.union(self.agents[agent].shift_route(
-                            2, False))
-
-
-        elif len(priorities) > 2:
-            priorities.sort(reverse=True)
-            for i, agent in enumerate(priorities):
-                if i > 0 and len(self.agents[agent[1]].route) > 0:
-                    x, y = self.agents[agent[1]].route[0]
-                    if time in self.tile_map[x][y].timestamp:
-                        overlap_path_agents = self.tile_map[x][y].timestamp[time]
-                        new_conflicts = new_conflicts.union(self.agents[
-                            agent[1]].shift_route(i + 1, overlap_path_agents))
-        """
-        return new_conflicts
+        time, agent, path_overlap, same_tile = conflict
+        if same_tile == 1:
+            self.agents[agent].shift_route(time, 1, path_overlap)
+        else:
+            self.agents[agent].shift_route(time, 2, path_overlap)
