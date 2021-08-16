@@ -1,4 +1,5 @@
 from ast import literal_eval
+from numpy.lib.function_base import append
 from numpy.lib.histograms import _histogram_bin_edges_dispatcher
 import pygame
 from pygame.constants import K_LEFT, K_RIGHT
@@ -7,7 +8,7 @@ import numpy as np
 import pandas as pd
 from csv import reader
 import time
-
+import random
 
 class Screen:
 
@@ -22,6 +23,9 @@ class Screen:
             csv_reader = reader(read_obj)
             for row in csv_reader:
                 self.history.append(row)
+        self.color = []
+        for i in range(len(self.history)):
+            self.color.append([random.randrange(0, 255),random.randrange(0, 255),random.randrange(0, 255)])
         self.clock = pygame.time.Clock()
 
     def draw_square_(self, x, y, col):
@@ -32,13 +36,18 @@ class Screen:
                                      self.tileSize - 1,
                                      self.tileSize - 1))
 
-    def draw(self):
+    def draw(self, time):
         for x in range(len(self.map)):
             for y in range(len(self.map[0])):
-                self.draw_square_(x, y, tileColor[self.map[x][y]])
+                if self.map[x][y]==1:
+                    for i in range(len(self.history)):
+                        if len(self.history[i])>time and time >=0 and literal_eval(self.history[i][time])== (x,y):
+                            self.draw_square_(x, y, self.color[i])
+                else:
+                    self.draw_square_(x, y, tileColor[self.map[x][y]])
 
-    def draw_frame(self):
-        self.draw()
+    def draw_frame(self, time):
+        self.draw(time)
         pygame.display.flip()
 
     def update_map(self, before, after):
@@ -46,15 +55,20 @@ class Screen:
             if len(agent) > after and len(agent) > before and before >= 0 and after >= 0:
                 pos = literal_eval(agent[before])
                 self.map[pos[0]][pos[1]] = 0
+        new_pos = []
+        for agent in self.history:
+            if len(agent) > after and len(agent) > before and before >= 0 and after >= 0:            
                 pos2 = literal_eval(agent[after])
+                new_pos.append(pos2)
                 self.map[pos2[0]][pos2[1]] = 1
+        print(new_pos)
 
     def run(self):
         i = -1
         tmp = -1
         while not self.done:
             self.clock.tick(100)
-            self.draw_frame()
+            self.draw_frame(i)
             if tmp != i:
                 print(i)
                 tmp = i
