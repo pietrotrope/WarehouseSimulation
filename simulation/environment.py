@@ -186,9 +186,22 @@ class Environment:
                     else:
                         conflict = agent.declare_route()
                         while conflict:
-                            self.solve_conflict(conflict)
-                            conflict = agent.declare_route(conflict[0])
+                            swap = self.solve_conflict(conflict)
+
+                            if conflict != None and conflict[2] != -1:
+                                other_agent = self.agents[conflict[2]]
+                                task_ends[other_agent.id] = self.time + \
+                                    len(other_agent.route)
+
+                            this_agent = self.agents[conflict[1]]
+                            task_ends[this_agent.id] = self.time + \
+                                len(this_agent.route)
+
+                            conflict = agent.declare_route(conflict[0], swap)
                         task_ends[i] = self.time + len(agent.route)
+
+            print(self.time)
+            print(task_ends)
 
             self.time = min(task_ends)
             for agent in self.agents:
@@ -208,8 +221,12 @@ class Environment:
             wr.writerows(res)
 
     def solve_conflict(self, conflict):
-        time, agent, path_overlap, same_tile = conflict
-        if same_tile == 1:
-            self.agents[agent].shift_route(time, 1, path_overlap)
+        time, agent, other_agent = conflict
+        if other_agent != -1:
+            self.agents[agent].shift_route(time-1)
+            #TODO MA OTHER AGENT HA GIà DICHIARATO E MO CHE FAI?
+            self.agents[other_agent].shift_route(time-1)
+            return True
         else:
-            self.agents[agent].shift_route(time, 2, path_overlap)
+            self.agents[agent].shift_route(time-1)
+            return False
