@@ -6,11 +6,13 @@ import csv
 import json
 from itertools import count
 
-from simulation.agent.agent import Agent, detect_possible_conflict
+from simulation.agent.agent import Agent, declare_route
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
+
+import time
 
 
 class Environment:
@@ -172,10 +174,11 @@ class Environment:
                           task_handler=self.task_handler)
 
             self.agents.append(agent)
-
+    
     def run(self):
         task_ends = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
+
         for simulation_time in count(0):
             for i, agent in enumerate(self.agents):
                 if not agent.route:
@@ -183,34 +186,34 @@ class Environment:
                     if done[i]:
                         agent.position = agent.home
                         task_ends[i] = sys.maxsize
+                        agent.task = None
                     else:
-                        conflict = agent.declare_route()
-                        while conflict:
-                            swap = self.solve_conflict(conflict)
-
-                            if conflict != None and conflict[2] != -1:
-                                other_agent = self.agents[conflict[2]]
-                                task_ends[other_agent.id] = self.time + \
-                                    len(other_agent.route)
-
-                            this_agent = self.agents[conflict[1]]
-                            task_ends[this_agent.id] = self.time + \
-                                len(this_agent.route)
-
-                            conflict = agent.declare_route(conflict[0], swap)
                         task_ends[i] = self.time + len(agent.route)
 
-            print(self.time)
-            print(task_ends)
+            conflict = declare_route(self.agents)
+            while conflict != None:
+                swap = self.solve_conflict(conflict)
 
-            self.time = min(task_ends)
-            for agent in self.agents:
-                agent.skip_to(self.time)
+                if conflict != None and conflict[2] != -1:
+                    other_agent = self.agents[conflict[2]]
+                    task_ends[other_agent.id] = self.time + \
+                        len(other_agent.route)
+
+                this_agent = self.agents[conflict[1]]
+                task_ends[this_agent.id] = self.time + \
+                    len(this_agent.route)
+
+                conflict = declare_route(self.agents, conflict[0], swap)
+            
 
             if done.count(True) == len(done):
                 if self.save:
                     self.save_data()
                 break
+
+            self.time = min(task_ends)
+            for agent in self.agents:
+                agent.skip_to(self.time)
 
     def save_data(self):
         res = []
@@ -220,13 +223,30 @@ class Environment:
             wr = csv.writer(f)
             wr.writerows(res)
 
+    swap ="AAAAAAAAAAA"
     def solve_conflict(self, conflict):
-        time, agent, other_agent = conflict
+        time, agent, other_agent, changed_agent = conflict
+        print(conflict)
         if other_agent != -1:
+            agent2 = self.agents[other_agent]
+
             self.agents[agent].shift_route(time-1)
-            #TODO MA OTHER AGENT HA GIà DICHIARATO E MO CHE FAI?
-            self.agents[other_agent].shift_route(time-1)
-            return True
+
+            pos = agent2.route[time]
+               
+            if  agent2.id in self.tile_map[pos[0]][pos[1]].timestamp[time + self.time +1]:
+                self.tile_map[pos[0]][pos[1]].timestamp[time + self.time +1].remove(agent2.id)
+
+
+            agent2.shift_route(time-1)
+            self.swap = [agent, other_agent]
+            return [agent, other_agent]
         else:
-            self.agents[agent].shift_route(time-1)
-            return False
+            agent = self.agents[agent]
+            if changed_agent:
+                pos = agent.route[time]
+                self.tile_map[pos[0]][pos[1]].timestamp[time +
+                                                        self.time +1].remove(agent.id)
+            agent.shift_route(time-1)
+            self.swap = []
+            return []

@@ -15,23 +15,57 @@ def detect_possible_conflict(agent, i):
 
     if (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp:
         if len(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]) != 0:
-            print(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1])
             other_agent = agent.env.agents[agent.env.tile_map[x][y].timestamp[i +
                                                                               agent.env.time + 1][0]]
-            if len(other_agent.route) > i:
-                if i == 0 and agent.position == other_agent.route[i]:
-                    return (i, agent.id, other_agent.id)
-                else:
-                    if other_agent.route[i+1] == agent.route[i-1]:
-                        return (i, agent.id, other_agent.id)
-            if i == 0:
-                return (i, agent.id, -1)
-            return (i, agent.id, -1)
+            if other_agent.id != agent.id:
+                if i > 0 and agent.route[i+1] == other_agent.route[i-1]:
+                    return (i, agent.id, other_agent.id, 0)
 
-    for other_agent in agent.env.tile_map[x][y].timestamp[i + agent.env.time + 2]:
-        if agent.id != other_agent and i > 0:
-            if agent.env.agents[other_agent].route[i] == agent.route[i+1]:
-                return (i, agent.id, -1)
+                if i == 0 and other_agent.route[0] == agent.position and agent.route[0] == agent.position:
+                    return (i, agent.id, other_agent.id, 0)
+                    
+                if i == 0 and other_agent.route[0] == agent.position:
+                    return (i, other_agent.id, -1, 1)
+                                
+                print(agent.position)
+                print(other_agent.position)
+                print()
+                print(agent.route[i])
+                print(other_agent.route[i])
+                print()
+                print()
+                if i == 0 and agent.id == 7:
+                    print("NSADHI")
+                return (i, agent.id, -1, 0)
+
+    for other_agent in agent.env.agents:
+        if agent.id != other_agent.id and i > 0:
+            if len(agent.route) > i+1 and len(other_agent.route) > i and other_agent.route[i] == agent.route[i+1] and agent.route[i] == other_agent.route[i+1]:
+                print("PIZZA MARGHERITA")
+                return (i, agent.id, other_agent.id, 0)
+    return None
+
+
+def declare_route(agents, pos=0, swap=[]):
+    min_length = []
+    for agent in agents:
+        if agent.task != None:
+            min_length.append(len(agent.route))
+
+    if len(min_length) > 0:
+        min_length = min(min_length)
+
+        for i in range(pos, min_length):
+            for agent in agents:
+                if agent.task != None:
+                    
+                    if (i != pos+1) or agent.id not in swap:
+                        conflict = detect_possible_conflict(agent, i)
+                        if conflict:
+                            return conflict
+                    x, y = agent.route[i]
+                    agent.env.tile_map[x][y].timestamp[i +
+                                                       agent.env.time + 1].append(agent.id)
     return None
 
 
@@ -72,24 +106,8 @@ class Agent:
             self.route = [self.env.key_to_raster(cell)[0] for cell in route]
             return False
 
-    def declare_route(self, pos=0, swap=False):
-        if not swap:
-            conflict = detect_possible_conflict(self, pos)
-            if conflict:
-                return conflict
-        x, y = self.route[pos]
-        for i in range(pos + 1, len(self.route)):
-            conflict = detect_possible_conflict(self, i)
-            if conflict:
-                return conflict
-            x, y = self.route[i]
-            self.env.tile_map[x][y].timestamp[i +
-                                              self.env.time + 1].append(self.id)
-        return None
-
     def shift_route(self, i):
         if i <= 0:
-            print(i)
             return self.edit_route(0, [self.position])
         return self.edit_route(i, [self.route[i-1]])
 
