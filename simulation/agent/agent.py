@@ -5,7 +5,7 @@ import time
 
 
 def find_jump(x, y):
-    if abs(x[0]-y[1]) + abs(x[1]-y[1]) >= 1:
+    if abs(x[0] - y[1]) + abs(x[1] - y[1]) >= 1:
         return True
     return False
 
@@ -18,15 +18,15 @@ def detect_possible_conflict(agent, i):
             other_agent = agent.env.agents[agent.env.tile_map[x][y].timestamp[i +
                                                                               agent.env.time + 1][0]]
             if other_agent.id != agent.id:
-                if i > 0 and agent.route[i+1] == other_agent.route[i-1]:
-                    return (i, agent.id, other_agent.id, 0)
+                if i > 0 and agent.route[i + 1] == other_agent.route[i - 1]:
+                    return i, agent.id, other_agent.id, 0
 
                 if i == 0 and other_agent.route[0] == agent.position and agent.route[0] == agent.position:
-                    return (i, agent.id, other_agent.id, 0)
-                    
+                    return i, agent.id, other_agent.id, 0
+
                 if i == 0 and other_agent.route[0] == agent.position:
-                    return (i, other_agent.id, -1, 1)
-                                
+                    return i, other_agent.id, -1, 1
+
                 print(agent.position)
                 print(other_agent.position)
                 print()
@@ -36,20 +36,23 @@ def detect_possible_conflict(agent, i):
                 print()
                 if i == 0 and agent.id == 7:
                     print("NSADHI")
-                return (i, agent.id, -1, 0)
+                return i, agent.id, -1, 0
 
     for other_agent in agent.env.agents:
         if agent.id != other_agent.id and i > 0:
-            if len(agent.route) > i+1 and len(other_agent.route) > i and other_agent.route[i] == agent.route[i+1] and agent.route[i] == other_agent.route[i+1]:
-                print("PIZZA MARGHERITA")
-                return (i, agent.id, other_agent.id, 0)
+            if len(agent.route) > i + 1 and len(other_agent.route) > i and other_agent.route[i] == agent.route[i + 1]:
+                if agent.route[i] == other_agent.route[i + 1]:
+                    print("PIZZA MARGHERITA")
+                    return i, agent.id, other_agent.id, 0
     return None
 
 
-def declare_route(agents, pos=0, swap=[]):
+def declare_route(agents, pos=0, swap=None):
+    if swap is None:
+        swap = []
     min_length = []
     for agent in agents:
-        if agent.task != None:
+        if agent.task is not None:
             min_length.append(len(agent.route))
 
     if len(min_length) > 0:
@@ -57,9 +60,9 @@ def declare_route(agents, pos=0, swap=[]):
 
         for i in range(pos, min_length):
             for agent in agents:
-                if agent.task != None:
-                    
-                    if (i != pos+1) or agent.id not in swap:
+                if agent.task is not None:
+
+                    if (i != pos + 1) or agent.id not in swap:
                         conflict = detect_possible_conflict(agent, i)
                         if conflict:
                             return conflict
@@ -84,6 +87,7 @@ class Agent:
         self.task = None
         self.log = [position]
         self.time = 0
+        self.has_to_wait = False
 
     def get_task(self):
         task = self.task_handler.get_task(self.id)
@@ -109,7 +113,7 @@ class Agent:
     def shift_route(self, i):
         if i <= 0:
             return self.edit_route(0, [self.position])
-        return self.edit_route(i, [self.route[i-1]])
+        return self.edit_route(i, [self.route[i - 1]])
 
     def edit_route(self, i, steps):
         self.route = self.route[0:i] + steps + self.route[i:]

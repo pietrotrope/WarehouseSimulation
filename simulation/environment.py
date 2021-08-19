@@ -110,8 +110,7 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-            (np.count_nonzero(self.raster_map == 4) -
-             picking_station_number)
+                      (np.count_nonzero(self.raster_map == 4) - picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]
@@ -174,7 +173,7 @@ class Environment:
                           task_handler=self.task_handler)
 
             self.agents.append(agent)
-    
+
     def run(self):
         task_ends = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
@@ -191,20 +190,17 @@ class Environment:
                         task_ends[i] = self.time + len(agent.route)
 
             conflict = declare_route(self.agents)
-            while conflict != None:
+            while conflict is not None:
                 swap = self.solve_conflict(conflict)
 
-                if conflict != None and conflict[2] != -1:
+                if conflict is not None and conflict[2] != -1:
                     other_agent = self.agents[conflict[2]]
-                    task_ends[other_agent.id] = self.time + \
-                        len(other_agent.route)
+                    task_ends[other_agent.id] = self.time + len(other_agent.route)
 
                 this_agent = self.agents[conflict[1]]
-                task_ends[this_agent.id] = self.time + \
-                    len(this_agent.route)
+                task_ends[this_agent.id] = self.time + len(this_agent.route)
 
                 conflict = declare_route(self.agents, conflict[0], swap)
-            
 
             if done.count(True) == len(done):
                 if self.save:
@@ -223,30 +219,29 @@ class Environment:
             wr = csv.writer(f)
             wr.writerows(res)
 
-    swap ="AAAAAAAAAAA"
+    swap = "AAAAAAAAAAA"
+
     def solve_conflict(self, conflict):
-        time, agent, other_agent, changed_agent = conflict
+        t, agent, other_agent, changed_agent = conflict
         print(conflict)
         if other_agent != -1:
             agent2 = self.agents[other_agent]
 
-            self.agents[agent].shift_route(time-1)
+            self.agents[agent].shift_route(t - 1)
 
-            pos = agent2.route[time]
-               
-            if  agent2.id in self.tile_map[pos[0]][pos[1]].timestamp[time + self.time +1]:
-                self.tile_map[pos[0]][pos[1]].timestamp[time + self.time +1].remove(agent2.id)
+            pos = agent2.route[t]
 
+            if agent2.id in self.tile_map[pos[0]][pos[1]].timestamp[t + self.time + 1]:
+                self.tile_map[pos[0]][pos[1]].timestamp[t + self.time + 1].remove(agent2.id)
 
-            agent2.shift_route(time-1)
+            agent2.shift_route(t - 1)
             self.swap = [agent, other_agent]
             return [agent, other_agent]
         else:
             agent = self.agents[agent]
             if changed_agent:
-                pos = agent.route[time]
-                self.tile_map[pos[0]][pos[1]].timestamp[time +
-                                                        self.time +1].remove(agent.id)
-            agent.shift_route(time-1)
+                pos = agent.route[t]
+                self.tile_map[pos[0]][pos[1]].timestamp[t + self.time + 1].remove(agent.id)
+            agent.shift_route(t - 1)
             self.swap = []
             return []
