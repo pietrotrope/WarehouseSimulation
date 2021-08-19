@@ -6,7 +6,7 @@ import csv
 import json
 from itertools import count
 
-from simulation.agent.agent import Agent, declare_route
+from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
@@ -17,7 +17,7 @@ import time
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None,
+    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=100, agent_number=8, scheduling=None,
                  save=False, run=True):
         self.scheduling = scheduling
         self.raster_map = None
@@ -45,7 +45,7 @@ class Environment:
         if run:
             self.run()
 
-    def new_simulation(self, task_number=50, run=True, save=False):
+    def new_simulation(self, task_number=100, run=True, save=False):
         self.time = 0
         self.task_number = task_number
         self.task_handler.new_task_pool(task_number)
@@ -186,30 +186,12 @@ class Environment:
                         agent.position = agent.home
                         task_ends[i] = sys.maxsize
                         agent.task = None
-                    else:
-                        task_ends[i] = self.time + len(agent.route)
-
-            conflict = declare_route(self.agents)
-            while conflict is not None:
-                swap = self.solve_conflict(conflict)
-
-                if conflict is not None and conflict[2] != -1:
-                    other_agent = self.agents[conflict[2]]
-                    task_ends[other_agent.id] = self.time + len(other_agent.route)
-
-                this_agent = self.agents[conflict[1]]
-                task_ends[this_agent.id] = self.time + len(this_agent.route)
-
-                conflict = declare_route(self.agents, conflict[0], swap)
-
+                agent.move()
+                # agent.watch() TODO: Find a better way to detect conflicts
             if done.count(True) == len(done):
                 if self.save:
                     self.save_data()
                 break
-
-            self.time = min(task_ends)
-            for agent in self.agents:
-                agent.skip_to(self.time)
 
     def save_data(self):
         res = []
