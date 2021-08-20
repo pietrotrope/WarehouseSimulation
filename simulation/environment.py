@@ -18,7 +18,7 @@ import time
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=50, agent_number=8, scheduling=None,
+    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=100, agent_number=8, scheduling=None,
                  save=False, run=True):
         self.scheduling = scheduling
         self.raster_map = None
@@ -46,7 +46,7 @@ class Environment:
         if run:
             self.run()
 
-    def new_simulation(self, task_number=50, run=True, save=False):
+    def new_simulation(self, task_number=100, run=True, save=False):
         self.time = 0
         self.task_number = task_number
         self.task_handler.new_task_pool(task_number)
@@ -111,8 +111,7 @@ class Environment:
         picking_station_number = self.__get_picking_stations_number()
 
         graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-            (np.count_nonzero(self.raster_map == 4) -
-             picking_station_number)
+                      (np.count_nonzero(self.raster_map == 4) - picking_station_number)
         self.graph = Graph(graph_nodes)
 
         picking_stations = [[] for _ in range(picking_station_number)]

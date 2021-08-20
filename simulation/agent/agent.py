@@ -5,7 +5,7 @@ import time
 
 
 def find_jump(x, y):
-    if abs(x[0]-y[1]) + abs(x[1]-y[1]) >= 1:
+    if abs(x[0] - y[1]) + abs(x[1] - y[1]) >= 1:
         return True
     return False
 
@@ -86,6 +86,7 @@ def make_step(agents, to_time, pos=0):
 class Agent:
 
     def __init__(self, agent_id, position, env, route=None, direction=Direction.DOWN, task_handler=None):
+        self.view = None
         if route is None:
             route = []
         self.id = agent_id
@@ -111,9 +112,20 @@ class Agent:
             if not route_to_pod:
                 route_to_pod = [self.env.raster_to_graph[self.position]]
             route = route_to_pod
-            # TODO se route_to_pod[-1]!=route_to_ps[0] aggiungi 2 step, uno uguale a route_to_pod[-1] ed uno che porta alla cella vicino a
-            # route_to_ps[0]
+
             route_to_ps = self.env.routes[id_pod].copy()
+            if route_to_pod[-1] != route_to_ps[0]:
+                start = self.env.key_to_raster(route_to_ps[0])[0]
+                end = self.env.key_to_raster(route_to_pod[-1])[0]
+                movement = tuple(map(lambda i, j: i - j, start, end))
+                if self.env.raster_map[tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
+                    route_to_ps.insert(0,
+                                       self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
+                                                                          end, (0, movement[1])))])
+                else:
+                    route_to_ps.insert(0,  self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
+                                                                              end, (movement[0], 0)))])
+                route_to_ps.insert(0, route_to_pod[-1])
             route = [*route, *route_to_ps.copy()]
             route_to_ps.reverse()
             route = [*route, *route_to_ps]
@@ -123,7 +135,7 @@ class Agent:
     def shift_route(self, i):
         if i <= 0:
             return self.edit_route(0, [self.position])
-        return self.edit_route(i, [self.route[i-1]])
+        return self.edit_route(i, [self.route[i - 1]])
 
     def edit_route(self, i, steps):
         self.route = self.route[0:i] + steps + self.route[i:]
