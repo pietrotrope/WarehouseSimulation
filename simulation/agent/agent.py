@@ -10,62 +10,76 @@ def find_jump(x, y):
     return False
 
 
-def detect_possible_conflict(agent, i):
+def detect_collision(agent, i):
+    # return collision_type, time, agent, other_agent
     x, y = agent.route[i]
 
-    if (i + agent.env.time + 1) in agent.env.tile_map[x][y].timestamp:
-        if len(agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]) != 0:
-            other_agent = agent.env.agents[agent.env.tile_map[x][y].timestamp[i +
-                                                                              agent.env.time + 1][0]]
-            if other_agent.id != agent.id:
-                if i > 0 and agent.route[i+1] == other_agent.route[i-1]:
-                    return (i, agent.id, other_agent.id, 0)
-
-                if i == 0 and other_agent.route[0] == agent.position and agent.route[0] == agent.position:
-                    return (i, agent.id, other_agent.id, 0)
-                    
-                if i == 0 and other_agent.route[0] == agent.position:
-                    return (i, other_agent.id, -1, 1)
-                                
-                print(agent.position)
-                print(other_agent.position)
-                print()
-                print(agent.route[i])
-                print(other_agent.route[i])
-                print()
-                print()
-                if i == 0 and agent.id == 7:
-                    print("NSADHI")
-                return (i, agent.id, -1, 0)
-
-    for other_agent in agent.env.agents:
-        if agent.id != other_agent.id and i > 0:
-            if len(agent.route) > i+1 and len(other_agent.route) > i and other_agent.route[i] == agent.route[i+1] and agent.route[i] == other_agent.route[i+1]:
-                print("PIZZA MARGHERITA")
-                return (i, agent.id, other_agent.id, 0)
+    agents = agent.env.tile_map[x][y].timestamp[i + agent.env.time]
+    if len(agents) > 0 and agents[0] != agent.id:
+        other_agent = agent.env.agents[agents[0]]
+        # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
+        # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
+        # o andarsene, cosi da agire di conseguenza
+        if len(other_agent.route) > i:
+            # l'altro agente si muoverà
+            if i > 0:
+                if other_agent.route[i] == agent.route[i-1]:
+                    # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
+                    return 0, i, agent.id, other_agent.id
+                if other_agent.route[i] == other_agent.route[i-1]:
+                    # controllo se sta fermo e quindi devo stare fermo anche io
+                    return 1, i, agent.id, -1
+            else:
+                if other_agent.route[i] == agent.position:
+                    # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
+                    return 0, i, agent.id, other_agent.id
+                if other_agent.route[i] == other_agent.position:
+                    # controllo se sta fermo e quindi devo stare fermo anche io
+                    return 1, i, agent.id, -1
+        else:
+            # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
+            return 1, i, agent.id, -1
+    else:
+        # al tempo attuale non c'è nessuno, vedo se quindi c'è qualcuno al tempo in cui voglio andarci
+        agents = agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]
+        # se c'è qualcuno, controllo se io ero già qui o no. in caso attendo un turno
+        if len(agents) > 0 and agents[0] != agent.id:
+            other_agent = agent.env.agents[agents[0]]
+            if i > 0:
+                if agent.route[i] == agent.route[i-1]:
+                    return 1, i, other_agent.id, -1
+                else:
+                    return 1, i, agent.id, -1
+            else:
+                if agent.route[i] == agent.position:
+                    return 1, i, other_agent.id, -1
+                else:
+                    return 1, i, agent.id, -1
     return None
 
 
-def declare_route(agents, pos=0, swap=[]):
-    min_length = []
-    for agent in agents:
-        if agent.task != None:
-            min_length.append(len(agent.route))
+def make_step(agents, to_time, pos=0):
+    for i in range(pos, to_time):
+        moves = []
+        swap_phases = []
+        for agent in agents:
+            if agent.task != None:
+                if agent.swap_phase == 0:
+                    collision = detect_collision(agent, i)
+                    if collision:
+                        for agent1, x1, y1, t in moves:
+                            agent1.env.tile_map[x1][y1].timestamp[t].remove(
+                                agent1.id)
+                        for ag in swap_phases:
+                            ag.swap_phase += 1
+                        return collision
+                else:
+                    agent.swap_phase -= 1
+                    swap_phases.append(agent)
 
-    if len(min_length) > 0:
-        min_length = min(min_length)
-
-        for i in range(pos, min_length):
-            for agent in agents:
-                if agent.task != None:
-                    
-                    if (i != pos+1) or agent.id not in swap:
-                        conflict = detect_possible_conflict(agent, i)
-                        if conflict:
-                            return conflict
-                    x, y = agent.route[i]
-                    agent.env.tile_map[x][y].timestamp[i +
-                                                       agent.env.time + 1].append(agent.id)
+                x, y = agent.route[i]
+                agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1].append(agent.id)
+                moves.append((agent, x, y, i + agent.env.time + 1))
     return None
 
 
@@ -83,7 +97,7 @@ class Agent:
         self.task_handler = task_handler
         self.task = None
         self.log = [position]
-        self.time = 0
+        self.swap_phase = 0
 
     def get_task(self):
         task = self.task_handler.get_task(self.id)
@@ -114,8 +128,7 @@ class Agent:
     def edit_route(self, i, steps):
         self.route = self.route[0:i] + steps + self.route[i:]
 
-    def skip_to(self, t):
-        delta = t - self.time
+    def skip_to(self, delta):
         if delta > 0:
             if len(self.route) >= delta:
                 self.log += self.route[0:delta]
@@ -135,4 +148,3 @@ class Agent:
                     self.position = self.home
                     self.log.append(self.position)
                 self.direction = (0, 0)
-            self.time = t

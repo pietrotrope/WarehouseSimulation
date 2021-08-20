@@ -10,15 +10,14 @@ import json
 if __name__ == '__main__':
     random.seed(666)
     s = time.time()
-    e = Environment(map_path='./map.csv', save=False, task_number=100)
+    e = Environment(map_path='./map.csv', save=True, task_number=100)
     end = time.time() - s
     print("done in {} seconds".format(end))
-    
     times = []
     for i in range(2):
         s = time.time()
         print(i)
-        e.new_simulation(task_number=400, save=True)
+        e.new_simulation(task_number=100, save=True)
         end = time.time() - s
         times.append(end)
     print(statistics.mean(times))

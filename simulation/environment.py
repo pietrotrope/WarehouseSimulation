@@ -1,3 +1,4 @@
+import simulation
 import sys
 
 import pandas as pd
@@ -6,7 +7,7 @@ import csv
 import json
 from itertools import count
 
-from simulation.agent.agent import Agent, declare_route
+from simulation.agent.agent import Agent, make_step
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
@@ -174,46 +175,55 @@ class Environment:
                           task_handler=self.task_handler)
 
             self.agents.append(agent)
-    
+
+    def task_ending_time(self, agent):
+        return self.time + len(agent.route)
+
     def run(self):
-        task_ends = [sys.maxsize for _ in range(self.agent_number)]
+        task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
 
         for simulation_time in count(0):
+
+            # Assign tasks
             for i, agent in enumerate(self.agents):
                 if not agent.route:
                     done[i] = agent.get_task()
                     if done[i]:
                         agent.position = agent.home
-                        task_ends[i] = sys.maxsize
+                        task_ending_times[i] = sys.maxsize
                         agent.task = None
                     else:
-                        task_ends[i] = self.time + len(agent.route)
+                        task_ending_times[i] = self.task_ending_time(agent)
 
-            conflict = declare_route(self.agents)
-            while conflict != None:
-                swap = self.solve_conflict(conflict)
+            collision = make_step(self.agents, min(task_ending_times)-self.time)
+            while collision:
+                self.avoid_collision(collision)
 
-                if conflict != None and conflict[2] != -1:
-                    other_agent = self.agents[conflict[2]]
-                    task_ends[other_agent.id] = self.time + \
-                        len(other_agent.route)
+                if collision and collision[3] != -1:
+                    other_agent = self.agents[collision[3]]
+                    task_ending_times[collision[3]] = self.task_ending_time(other_agent)
 
-                this_agent = self.agents[conflict[1]]
-                task_ends[this_agent.id] = self.time + \
-                    len(this_agent.route)
+                this_agent = self.agents[collision[2]]
+                task_ending_times[collision[2]] = self.task_ending_time(this_agent)
 
-                conflict = declare_route(self.agents, conflict[0], swap)
-            
+                collision = make_step(self.agents, min(task_ending_times)-self.time, collision[1])
 
-            if done.count(True) == len(done):
-                if self.save:
-                    self.save_data()
+            if self.simulation_ended(done):
                 break
+            self.update_simulation_time(min(task_ending_times))
 
-            self.time = min(task_ends)
-            for agent in self.agents:
-                agent.skip_to(self.time)
+    def simulation_ended(self, done):
+        if done.count(True) == len(done)-1:
+            if self.save:
+                self.save_data()
+            return True
+        return False
+
+    def update_simulation_time(self, new_time):
+        for agent in self.agents:
+            agent.skip_to(new_time - self.time)
+        self.time = new_time
 
     def save_data(self):
         res = []
@@ -223,30 +233,18 @@ class Environment:
             wr = csv.writer(f)
             wr.writerows(res)
 
-    swap ="AAAAAAAAAAA"
-    def solve_conflict(self, conflict):
-        time, agent, other_agent, changed_agent = conflict
-        print(conflict)
-        if other_agent != -1:
+    def avoid_collision(self, collision):
+        collision_type, time, agent, other_agent = collision
+        if collision_type == 0:
+            agent1 = self.agents[agent]
             agent2 = self.agents[other_agent]
 
-            self.agents[agent].shift_route(time-1)
+            agent1.shift_route(time)
+            agent1.swap_phase = 2
+            
+            agent2.shift_route(time)
+            agent2.swap_phase = 2
+        elif collision_type == 1:
+            agent1 = self.agents[agent]
+            agent1.shift_route(time)
 
-            pos = agent2.route[time]
-               
-            if  agent2.id in self.tile_map[pos[0]][pos[1]].timestamp[time + self.time +1]:
-                self.tile_map[pos[0]][pos[1]].timestamp[time + self.time +1].remove(agent2.id)
-
-
-            agent2.shift_route(time-1)
-            self.swap = [agent, other_agent]
-            return [agent, other_agent]
-        else:
-            agent = self.agents[agent]
-            if changed_agent:
-                pos = agent.route[time]
-                self.tile_map[pos[0]][pos[1]].timestamp[time +
-                                                        self.time +1].remove(agent.id)
-            agent.shift_route(time-1)
-            self.swap = []
-            return []
