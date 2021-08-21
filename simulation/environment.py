@@ -160,10 +160,7 @@ class Environment:
             node.coord = picking_station
 
     def __gen_tile_map(self):
-        self.tile_map = np.zeros_like(self.raster_map).tolist()
-        for i, row in enumerate(self.raster_map):
-            for j, cell in enumerate(row):
-                self.tile_map[i][j] = Cell(Tile(cell))
+        self.tile_map = [[Cell(Tile(cell)) for cell in row] for row in self.raster_map]
 
     def __spawn_agents(self, cfg_path):
         positions = self.agents
@@ -212,12 +209,12 @@ class Environment:
 
         for simulation_time in count(0):
             # Assign tasks
-            for i, agent in enumerate(self.agents):
+            for agent in self.agents:
                 if not agent.route:
-                    done[i] = agent.get_task()
-                    if done[i]:
+                    done[agent.id] = agent.get_task()
+                    if done[agent.id]:
                         agent.position = agent.home
-                        task_ending_times[i] = sys.maxsize
+                        task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
                         task_ending_times[i] = self.task_ending_time(agent)
