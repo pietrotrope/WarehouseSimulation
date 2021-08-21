@@ -217,7 +217,7 @@ class Environment:
                         task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
-                        task_ending_times[i] = self.task_ending_time(agent)
+                        task_ending_times[agent.id] = self.task_ending_time(agent)
 
             if self.simulation_ended(done):
                 if self.save:
@@ -238,7 +238,7 @@ class Environment:
             self.update_simulation_time(min(task_ending_times))
 
     def simulation_ended(self, done):
-        return (done.count(True) == len(done))
+        return done.count(True) == len(done)
 
     def update_simulation_time(self, new_time):
         for agent in self.agents:
