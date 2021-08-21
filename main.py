@@ -17,7 +17,7 @@ if __name__ == '__main__':
     for i in range(100):
         s = time.time()
         print("run {}".format(i))
-        e.new_simulation(task_number=400, save=True)
+        e.new_simulation(task_number=400, save=False)
         end = time.time() - s
         times.append(end)
     print(statistics.mean(times))

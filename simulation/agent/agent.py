@@ -53,8 +53,9 @@ class Agent:
 
     def shift_route(self, i):
         if i <= 0:
-            return self.route.insert(0, self.position)
-        return self.route.insert(i, self.route[i - 1])
+            self.route.insert(0, self.position)
+        else:
+            self.route.insert(i, self.route[i - 1])
 
     def skip_to(self, delta):
         if delta > 0:

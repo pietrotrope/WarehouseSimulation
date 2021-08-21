@@ -199,8 +199,9 @@ class Environment:
                                 agent.swap_phase[1] = agent.id
 
                     x, y = agent.route[i]
-                    self.tile_map[x][y].timestamp[i + self.time + 1].append(agent.id)
-                    moves.append((agent, x, y, i + self.time + 1))
+                    i_plus_time_plus_one = i + self.time + 1
+                    self.tile_map[x][y].timestamp[i_plus_time_plus_one].append(agent.id)
+                    moves.append((agent, x, y, i_plus_time_plus_one))
         return None
 
     def run(self):
@@ -217,7 +218,7 @@ class Environment:
                         task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
-                        task_ending_times[i] = self.task_ending_time(agent)
+                        task_ending_times[agent.id] = self.task_ending_time(agent)
 
             if self.simulation_ended(done):
                 if self.save:
