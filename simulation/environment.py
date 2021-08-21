@@ -120,7 +120,7 @@ class Environment:
         agent_count = 0
 
         for i in range(self.map_shape[0]):
-            current_picking_station: int = -1
+            current_picking_station= -1
             for j in range(self.map_shape[1]):
                 if self.raster_map[i][j] == 4:
                     if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
@@ -179,10 +179,12 @@ class Environment:
         return self.time + len(agent.route)
 
     def make_step(self, to_time, pos=0):
+        moves = []
+        swap_phases = []
         for i in range(pos, to_time):
-            moves = []
-            swap_phases = []
-            for agent in self.agents:
+            moves.clear()
+            swap_phases.clear()            
+            for agent in self.agents:                    
                 if agent.task is not None:
                     collision = agent.detect_collision(i)
                     if collision:
@@ -199,7 +201,6 @@ class Environment:
                             if agent.swap_phase[0] == 0:
                                 agent.swap_phase[1] = agent.id
 
-
                     x, y = agent.route[i]
                     self.tile_map[x][y].timestamp[i + self.time + 1].append(agent.id)
                     moves.append((agent, x, y, i + self.time + 1))
@@ -210,7 +211,6 @@ class Environment:
         done = [False for _ in range(self.agent_number)]
 
         for simulation_time in count(0):
-
             # Assign tasks
             for i, agent in enumerate(self.agents):
                 if not agent.route:
@@ -221,29 +221,27 @@ class Environment:
                         agent.task = None
                     else:
                         task_ending_times[i] = self.task_ending_time(agent)
+
+            if self.simulation_ended(done):
+                if self.save:
+                    self.save_data()
+                break
+            
             collision = self.make_step(min(task_ending_times) - self.time)
             while collision:
                 self.avoid_collision(collision)
 
-                if collision and collision[3] != -1:
-                    other_agent = self.agents[collision[3]]
-                    task_ending_times[collision[3]] = self.task_ending_time(other_agent)
+                if collision[3] != -1:
+                    task_ending_times[collision[3]] = self.task_ending_time(self.agents[collision[3]])
 
-                this_agent = self.agents[collision[2]]
-                task_ending_times[collision[2]] = self.task_ending_time(this_agent)
+                task_ending_times[collision[2]] = self.task_ending_time(self.agents[collision[2]])
 
                 collision = self.make_step(min(task_ending_times)-self.time, collision[1])
-
-            if self.simulation_ended(done):
-                break
+            
             self.update_simulation_time(min(task_ending_times))
 
     def simulation_ended(self, done):
-        if done.count(True) == len(done)-1:
-            if self.save:
-                self.save_data()
-            return True
-        return False
+        return (done.count(True) == len(done))
 
     def update_simulation_time(self, new_time):
         for agent in self.agents:
@@ -260,16 +258,13 @@ class Environment:
 
     def avoid_collision(self, collision):
         collision_type, time, agent, other_agent = collision
+        agent1 = self.agents[agent]
+        agent1.shift_route(time)
         if collision_type == 0:
-            agent1 = self.agents[agent]
             agent2 = self.agents[other_agent]
-
-            agent1.shift_route(time)
             agent1.swap_phase = [2, agent2.id]
-            
             agent2.shift_route(time)
             agent2.swap_phase = [2, agent1.id]
-        elif collision_type == 1:
-            agent1 = self.agents[agent]
-            agent1.shift_route(time)
+
+            
 

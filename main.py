@@ -14,10 +14,10 @@ if __name__ == '__main__':
     end = time.time() - s
     print("done in {} seconds".format(end))
     times = []
-    for i in range(2):
+    for i in range(100):
         s = time.time()
         print("run {}".format(i))
-        e.new_simulation(task_number=100, save=True)
+        e.new_simulation(task_number=400, save=True)
         end = time.time() - s
         times.append(end)
     print(statistics.mean(times))
