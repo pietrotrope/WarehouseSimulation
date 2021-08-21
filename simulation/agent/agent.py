@@ -5,82 +5,7 @@ import time
 
 
 def find_jump(x, y):
-    if abs(x[0] - y[1]) + abs(x[1] - y[1]) >= 1:
-        return True
-    return False
-
-
-def detect_collision(agent, i):
-    # return collision_type, time, agent, other_agent
-    x, y = agent.route[i]
-
-    agents = agent.env.tile_map[x][y].timestamp[i + agent.env.time]
-    if len(agents) > 0 and agents[0] != agent.id:
-        other_agent = agent.env.agents[agents[0]]
-        # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
-        # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
-        # o andarsene, cosi da agire di conseguenza
-        if len(other_agent.route) > i:
-            # l'altro agente si muoverà
-            if i > 0:
-                if other_agent.route[i] == agent.route[i-1]:
-                    # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
-                    return 0, i, agent.id, other_agent.id
-                if other_agent.route[i] == other_agent.route[i-1]:
-                    # controllo se sta fermo e quindi devo stare fermo anche io
-                    return 1, i, agent.id, -1
-            else:
-                if other_agent.route[i] == agent.position:
-                    # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
-                    return 0, i, agent.id, other_agent.id
-                if other_agent.route[i] == other_agent.position:
-                    # controllo se sta fermo e quindi devo stare fermo anche io
-                    return 1, i, agent.id, -1
-        else:
-            # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
-            return 1, i, agent.id, -1
-    else:
-        # al tempo attuale non c'è nessuno, vedo se quindi c'è qualcuno al tempo in cui voglio andarci
-        agents = agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1]
-        # se c'è qualcuno, controllo se io ero già qui o no. in caso attendo un turno
-        if len(agents) > 0 and agents[0] != agent.id:
-            other_agent = agent.env.agents[agents[0]]
-            if i > 0:
-                if agent.route[i] == agent.route[i-1]:
-                    return 1, i, other_agent.id, -1
-                else:
-                    return 1, i, agent.id, -1
-            else:
-                if agent.route[i] == agent.position:
-                    return 1, i, other_agent.id, -1
-                else:
-                    return 1, i, agent.id, -1
-    return None
-
-
-def make_step(agents, to_time, pos=0):
-    for i in range(pos, to_time):
-        moves = []
-        swap_phases = []
-        for agent in agents:
-            if agent.task != None:
-                if agent.swap_phase == 0:
-                    collision = detect_collision(agent, i)
-                    if collision:
-                        for agent1, x1, y1, t in moves:
-                            agent1.env.tile_map[x1][y1].timestamp[t].remove(
-                                agent1.id)
-                        for ag in swap_phases:
-                            ag.swap_phase += 1
-                        return collision
-                else:
-                    agent.swap_phase -= 1
-                    swap_phases.append(agent)
-
-                x, y = agent.route[i]
-                agent.env.tile_map[x][y].timestamp[i + agent.env.time + 1].append(agent.id)
-                moves.append((agent, x, y, i + agent.env.time + 1))
-    return None
+    return abs(x[0] - y[1]) + abs(x[1] - y[1]) >= 1
 
 
 class Agent:
@@ -123,8 +48,8 @@ class Agent:
                                        self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
                                                                           end, (0, movement[1])))])
                 else:
-                    route_to_ps.insert(0,  self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
-                                                                              end, (movement[0], 0)))])
+                    route_to_ps.insert(0, self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
+                                                                             end, (movement[0], 0)))])
                 route_to_ps.insert(0, route_to_pod[-1])
             route = [*route, *route_to_ps.copy()]
             route_to_ps.reverse()
@@ -160,3 +85,57 @@ class Agent:
                     self.position = self.home
                     self.log.append(self.position)
                 self.direction = (0, 0)
+
+    def detect_collision(self, i):
+        # return collision_type, time, agent, other_agent
+        x, y = self.route[i]
+
+        agents = self.env.tile_map[x][y].timestamp[i + self.env.time]
+        if len(agents) > 0 and agents[0] != self.id:
+            other_agent = self.env.agents[agents[0]]
+            # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
+            # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
+            # o andarsene, cosi da agire di conseguenza
+            if len(other_agent.route) > i:
+                # l'altro agente si muoverà
+                if i > 0:
+                    if other_agent.route[i] == self.route[i - 1]:
+                        # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
+                        if other_agent.swap_phase != 0:
+                            return 1, i, self.id, -1
+                        return 0, i, self.id, other_agent.id
+                    if other_agent.route[i] == other_agent.route[i - 1]:
+                        # controllo se sta fermo e quindi devo stare fermo anche io
+                        return 1, i, self.id, -1
+                else:
+                    if other_agent.route[i] == self.position:
+                        # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
+                        if other_agent.swap_phase != 0:
+                            return 1, i, self.id, -1
+                        return 0, i, self.id, other_agent.id
+                    if other_agent.route[i] == other_agent.position:
+                        # controllo se sta fermo e quindi devo stare fermo anche io
+                        return 1, i, self.id, -1
+
+                new_agents = self.env.tile_map[x][y].timestamp[i + self.env.time + 1]
+                if new_agents and new_agents[0] != self.id:
+                    return 1, i, self.id, -1
+            else:
+                # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
+                return 1, i, self.id, -1
+        # al tempo attuale non c'è nessuno, vedo se quindi c'è qualcuno al tempo in cui voglio andarci
+        agents = self.env.tile_map[x][y].timestamp[i + self.env.time + 1]
+        # se c'è qualcuno, controllo se io ero già qui o no. in caso attendo un turno
+        if len(agents) > 0 and agents[0] != self.id:
+            other_agent = self.env.agents[agents[0]]
+            if i > 0:
+                if self.route[i] == self.route[i - 1]:
+                    return 1, i, other_agent.id, -1
+                else:
+                    return 1, i, self.id, -1
+            else:
+                if self.route[i] == self.position:
+                    return 1, i, other_agent.id, -1
+                else:
+                    return 1, i, self.id, -1
+        return None

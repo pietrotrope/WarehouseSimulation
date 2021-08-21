@@ -10,6 +10,7 @@ from csv import reader
 import time
 import random
 
+
 class Screen:
 
     def __init__(self, tile_size, screen_width=800, screen_height=600):
@@ -25,7 +26,7 @@ class Screen:
                 self.history.append(row)
         self.color = []
         for i in range(len(self.history)):
-            self.color.append([random.randrange(0, 255),random.randrange(0, 255),random.randrange(0, 255)])
+            self.color.append([random.randrange(0, 255), random.randrange(0, 255), random.randrange(0, 255)])
         self.clock = pygame.time.Clock()
 
     def draw_square_(self, x, y, col):
@@ -39,9 +40,9 @@ class Screen:
     def draw(self, time):
         for x in range(len(self.map)):
             for y in range(len(self.map[0])):
-                if self.map[x][y]==1:
+                if self.map[x][y] == 1:
                     for i in range(len(self.history)):
-                        if len(self.history[i])>time and time >=0 and literal_eval(self.history[i][time])== (x,y):
+                        if len(self.history[i]) > time >= 0 and literal_eval(self.history[i][time]) == (x, y):
                             self.draw_square_(x, y, self.color[i])
                 else:
                     self.draw_square_(x, y, tileColor[self.map[x][y]])
@@ -52,12 +53,12 @@ class Screen:
 
     def update_map(self, before, after):
         for agent in self.history:
-            if len(agent) > after and len(agent) > before and before >= 0 and after >= 0:
+            if len(agent) > after >= 0 and len(agent) > before >= 0:
                 pos = literal_eval(agent[before])
                 self.map[pos[0]][pos[1]] = 0
         new_pos = []
         for agent in self.history:
-            if len(agent) > after and len(agent) > before and before >= 0 and after >= 0:            
+            if len(agent) > after >= 0 and len(agent) > before >= 0:
                 pos2 = literal_eval(agent[after])
                 new_pos.append(pos2)
                 self.map[pos2[0]][pos2[1]] = 1
@@ -76,13 +77,13 @@ class Screen:
             keys = pygame.key.get_pressed()
             if keys[K_LEFT]:
                 if i > 0:
-                    self.update_map(i, i-1)
-                    i = i-1
+                    self.update_map(i, i - 1)
+                    i = i - 1
                     time.sleep(0.05)
             if keys[K_RIGHT]:
                 last = time.time()
-                self.update_map(i, i+1)
-                i = i+1
+                self.update_map(i, i + 1)
+                i = i + 1
                 time.sleep(0.05)
 
             for event in pygame.event.get():

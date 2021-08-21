@@ -7,7 +7,7 @@ import csv
 import json
 from itertools import count
 
-from simulation.agent.agent import Agent, make_step
+from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
@@ -178,6 +178,29 @@ class Environment:
     def task_ending_time(self, agent):
         return self.time + len(agent.route)
 
+    def make_step(self, to_time, pos=0):
+        for i in range(pos, to_time):
+            moves = []
+            swap_phases = []
+            for agent in self.agents:
+                if agent.task is not None:
+                    if agent.swap_phase == 0:
+                        collision = agent.detect_collision(i)
+                        if collision:
+                            for agent1, x1, y1, t in moves:
+                                self.tile_map[x1][y1].timestamp[t].remove(agent1.id)
+                            for ag in swap_phases:
+                                ag.swap_phase += 1
+                            return collision
+                    else:
+                        agent.swap_phase -= 1
+                        swap_phases.append(agent)
+
+                    x, y = agent.route[i]
+                    self.tile_map[x][y].timestamp[i + self.time + 1].append(agent.id)
+                    moves.append((agent, x, y, i + self.time + 1))
+        return None
+
     def run(self):
         task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
@@ -194,8 +217,7 @@ class Environment:
                         agent.task = None
                     else:
                         task_ending_times[i] = self.task_ending_time(agent)
-
-            collision = make_step(self.agents, min(task_ending_times)-self.time)
+            collision = self.make_step(min(task_ending_times) - self.time)
             while collision:
                 self.avoid_collision(collision)
 
@@ -206,7 +228,7 @@ class Environment:
                 this_agent = self.agents[collision[2]]
                 task_ending_times[collision[2]] = self.task_ending_time(this_agent)
 
-                collision = make_step(self.agents, min(task_ending_times)-self.time, collision[1])
+                collision = self.make_step(min(task_ending_times)-self.time, collision[1])
 
             if self.simulation_ended(done):
                 break

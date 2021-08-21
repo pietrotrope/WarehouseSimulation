@@ -14,17 +14,16 @@ class TaskHandler:
         self.pods = env.get_pods()
         self.task_pool = {}
         for i in range(n):
-            self.task_pool[i+1] = random.choice(self.pods)
-        
-    
-    def new_task_pool(self,n):
+            self.task_pool[i + 1] = random.choice(self.pods)
+
+    def new_task_pool(self, n):
         self.n = n
         self.scheduling = None
         if self.env.scheduling is not None:
             self.scheduling = self.env.scheduling
         self.task_pool = {}
         for i in range(n):
-            self.task_pool[i+1] = random.choice(self.pods)
+            self.task_pool[i + 1] = random.choice(self.pods)
 
     def get_task(self, robot_id):
         if self.scheduling is not None:
@@ -33,7 +32,7 @@ class TaskHandler:
             else:
                 selected_task = self.scheduling[robot_id].pop(0)
             return self.task_pool[selected_task]
-            
+
         else:
             if self.task_pool:
                 task_id = list(self.task_pool)[0]
