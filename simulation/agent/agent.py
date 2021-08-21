@@ -23,7 +23,7 @@ class Agent:
         self.task_handler = task_handler
         self.task = None
         self.log = [position]
-        self.swap_phase = 0
+        self.swap_phase = [0, self.id]
 
     def get_task(self):
         task = self.task_handler.get_task(self.id)
@@ -96,46 +96,57 @@ class Agent:
             # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
             # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
             # o andarsene, cosi da agire di conseguenza
-            if len(other_agent.route) > i:
-                # l'altro agente si muoverà
-                if i > 0:
-                    if other_agent.route[i] == self.route[i - 1]:
-                        # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
-                        if other_agent.swap_phase != 0:
+
+            if self.swap_phase[0] > 0:
+                if other_agent.id != self.id and other_agent.id != self.swap_phase[1]:
+                    return 1, i, other_agent.id, -1
+            else:
+                if len(other_agent.route) > i:
+                    # l'altro agente si muoverà
+                    if i > 0:
+                        if other_agent.route[i] == self.route[i - 1]:
+                            # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
+                            return 0, i, self.id, other_agent.id
+                        if other_agent.route[i] == other_agent.route[i - 1]:
+                            # controllo se sta fermo e quindi devo stare fermo anche io
                             return 1, i, self.id, -1
-                        return 0, i, self.id, other_agent.id
-                    if other_agent.route[i] == other_agent.route[i - 1]:
-                        # controllo se sta fermo e quindi devo stare fermo anche io
-                        return 1, i, self.id, -1
-                else:
-                    if other_agent.route[i] == self.position:
-                        # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
-                        if other_agent.swap_phase != 0:
+                    else:
+                        if other_agent.route[i] == self.position:
+                            # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
+                            return 0, i, self.id, other_agent.id
+                        if other_agent.route[i] == other_agent.position:
+                            # controllo se sta fermo e quindi devo stare fermo anche io
                             return 1, i, self.id, -1
-                        return 0, i, self.id, other_agent.id
-                    if other_agent.route[i] == other_agent.position:
-                        # controllo se sta fermo e quindi devo stare fermo anche io
+
+                    if other_agent.swap_phase[0] != 0:
                         return 1, i, self.id, -1
 
-                new_agents = self.env.tile_map[x][y].timestamp[i + self.env.time + 1]
-                if new_agents and new_agents[0] != self.id:
+                    new_agents = self.env.tile_map[x][y].timestamp[i +
+                                                                self.env.time + 1]
+                    if new_agents and new_agents[0] != self.id:
+                        return 1, i, self.id, -1
+                else:
+                    # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
                     return 1, i, self.id, -1
-            else:
-                # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
-                return 1, i, self.id, -1
         # al tempo attuale non c'è nessuno, vedo se quindi c'è qualcuno al tempo in cui voglio andarci
         agents = self.env.tile_map[x][y].timestamp[i + self.env.time + 1]
         # se c'è qualcuno, controllo se io ero già qui o no. in caso attendo un turno
         if len(agents) > 0 and agents[0] != self.id:
             other_agent = self.env.agents[agents[0]]
-            if i > 0:
-                if self.route[i] == self.route[i - 1]:
+
+            if self.swap_phase[0] > 0:
+                if other_agent.id != self.id and other_agent.id != self.swap_phase[1]:
+                    print(self.env.time)
                     return 1, i, other_agent.id, -1
-                else:
-                    return 1, i, self.id, -1
             else:
-                if self.route[i] == self.position:
-                    return 1, i, other_agent.id, -1
+                if i > 0:
+                    if self.route[i] == self.route[i - 1]:
+                        return 1, i, other_agent.id, -1
+                    else:
+                        return 1, i, self.id, -1
                 else:
-                    return 1, i, self.id, -1
+                    if self.route[i] == self.position:
+                        return 1, i, other_agent.id, -1
+                    else:
+                        return 1, i, self.id, -1
         return None

@@ -184,17 +184,21 @@ class Environment:
             swap_phases = []
             for agent in self.agents:
                 if agent.task is not None:
-                    if agent.swap_phase == 0:
-                        collision = agent.detect_collision(i)
-                        if collision:
-                            for agent1, x1, y1, t in moves:
-                                self.tile_map[x1][y1].timestamp[t].remove(agent1.id)
-                            for ag in swap_phases:
-                                ag.swap_phase += 1
-                            return collision
+                    collision = agent.detect_collision(i)
+                    if collision:
+                        for agent1, x1, y1, t in moves:
+                            self.tile_map[x1][y1].timestamp[t].remove(agent1.id)
+                        for ag in swap_phases:
+                            ag[0].swap_phase[0] += 1
+                            ag[0].swap_phase[1] = ag[1]
+                        return collision
                     else:
-                        agent.swap_phase -= 1
-                        swap_phases.append(agent)
+                        if agent.swap_phase[0] > 0:
+                            agent.swap_phase[0] -= 1
+                            swap_phases.append((agent,agent.swap_phase[1]))
+                            if agent.swap_phase[0] == 0:
+                                agent.swap_phase[1] = agent.id
+
 
                     x, y = agent.route[i]
                     self.tile_map[x][y].timestamp[i + self.time + 1].append(agent.id)
@@ -261,10 +265,10 @@ class Environment:
             agent2 = self.agents[other_agent]
 
             agent1.shift_route(time)
-            agent1.swap_phase = 2
+            agent1.swap_phase = [2, agent2.id]
             
             agent2.shift_route(time)
-            agent2.swap_phase = 2
+            agent2.swap_phase = [2, agent1.id]
         elif collision_type == 1:
             agent1 = self.agents[agent]
             agent1.shift_route(time)
