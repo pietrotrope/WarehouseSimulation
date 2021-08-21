@@ -239,7 +239,7 @@ class Environment:
             self.update_simulation_time(min(task_ending_times))
 
     def simulation_ended(self, done):
-        return (done.count(True) == len(done))
+        return done.count(True) == len(done)
 
     def update_simulation_time(self, new_time):
         for agent in self.agents:
