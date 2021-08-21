@@ -160,10 +160,7 @@ class Environment:
             node.coord = picking_station
 
     def __gen_tile_map(self):
-        self.tile_map = np.zeros_like(self.raster_map).tolist()
-        for i, row in enumerate(self.raster_map):
-            for j, cell in enumerate(row):
-                self.tile_map[i][j] = Cell(Tile(cell))
+        self.tile_map = [[Cell(Tile(cell)) for cell in row] for row in self.raster_map]
 
     def __spawn_agents(self, cfg_path):
         positions = self.agents
@@ -199,7 +196,6 @@ class Environment:
                             if agent.swap_phase[0] == 0:
                                 agent.swap_phase[1] = agent.id
 
-
                     x, y = agent.route[i]
                     self.tile_map[x][y].timestamp[i + self.time + 1].append(agent.id)
                     moves.append((agent, x, y, i + self.time + 1))
@@ -212,15 +208,19 @@ class Environment:
         for simulation_time in count(0):
 
             # Assign tasks
-            for i, agent in enumerate(self.agents):
+            for agent in self.agents:
                 if not agent.route:
-                    done[i] = agent.get_task()
-                    if done[i]:
+                    done[agent.id] = agent.get_task()
+                    if done[agent.id]:
                         agent.position = agent.home
-                        task_ending_times[i] = sys.maxsize
+                        task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
-                        task_ending_times[i] = self.task_ending_time(agent)
+                        task_ending_times[agent.id] = self.task_ending_time(agent)
+
+            if self.simulation_ended(done):
+                break
+
             collision = self.make_step(min(task_ending_times) - self.time)
             while collision:
                 self.avoid_collision(collision)
@@ -234,12 +234,10 @@ class Environment:
 
                 collision = self.make_step(min(task_ending_times)-self.time, collision[1])
 
-            if self.simulation_ended(done):
-                break
             self.update_simulation_time(min(task_ending_times))
 
     def simulation_ended(self, done):
-        if done.count(True) == len(done)-1:
+        if done.count(True) == len(done):
             if self.save:
                 self.save_data()
             return True

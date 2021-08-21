@@ -91,7 +91,8 @@ class Agent:
         x, y = self.route[i]
 
         agents = self.env.tile_map[x][y].timestamp[i + self.env.time]
-        if len(agents) > 0 and agents[0] != self.id:
+        new_agents = self.env.tile_map[x][y].timestamp[i + self.env.time + 1]
+        if agents and agents[0] != self.id:
             other_agent = self.env.agents[agents[0]]
             # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
             # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
@@ -121,22 +122,18 @@ class Agent:
                     if other_agent.swap_phase[0] != 0:
                         return 1, i, self.id, -1
 
-                    new_agents = self.env.tile_map[x][y].timestamp[i +
-                                                                self.env.time + 1]
                     if new_agents and new_agents[0] != self.id:
                         return 1, i, self.id, -1
                 else:
                     # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
                     return 1, i, self.id, -1
         # al tempo attuale non c'è nessuno, vedo se quindi c'è qualcuno al tempo in cui voglio andarci
-        agents = self.env.tile_map[x][y].timestamp[i + self.env.time + 1]
         # se c'è qualcuno, controllo se io ero già qui o no. in caso attendo un turno
-        if len(agents) > 0 and agents[0] != self.id:
-            other_agent = self.env.agents[agents[0]]
+        if new_agents and new_agents[0] != self.id:
+            other_agent = self.env.agents[new_agents[0]]
 
             if self.swap_phase[0] > 0:
                 if other_agent.id != self.id and other_agent.id != self.swap_phase[1]:
-                    print(self.env.time)
                     return 1, i, other_agent.id, -1
             else:
                 if i > 0:
