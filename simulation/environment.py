@@ -19,7 +19,8 @@ import time
 class Environment:
 
     def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=100, agent_number=8, scheduling=None,
-                 save=False, run=True):
+                 save=False, run=True, simulation_name=""):
+        self.simulation_name = simulation_name
         self.scheduling = scheduling
         self.raster_map = None
         self.tile_map = None
@@ -251,7 +252,7 @@ class Environment:
         res = []
         for agent in self.agents:
             res.append(agent.log)
-        with open("./out.csv", "w") as f:
+        with open(self.simulation_name+"_out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
         
@@ -263,7 +264,7 @@ class Environment:
 
         bu = min(res_lengths)/max(res_lengths)
 
-        with open('metrics.txt', 'w') as f:
+        with open(self.simulation_name+'_metrics.txt', 'w') as f:
             f.write('Total Time:\n')
             f.write(str(max(res_lengths)))
             f.write("\nTotal Travel Cost:\n")

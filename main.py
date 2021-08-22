@@ -10,7 +10,7 @@ import json
 if __name__ == '__main__':
     random.seed(666)
     s = time.time()
-    e = Environment(map_path='rendering/map.csv', save=True, task_number=100, scheduling="Greedy0")
+    e = Environment(map_path='rendering/map.csv', save=True, task_number=100, scheduling="Greedy0", simulation_name="test")
     end = time.time() - s
     print("done in {} seconds".format(end))
     times = []
