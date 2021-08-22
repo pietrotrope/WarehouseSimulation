@@ -1,24 +1,19 @@
-from os import stat
-import random
-from numpy.lib.function_base import average
-from numpy.lib.npyio import save
+from random import seed
 from simulation.environment import Environment
-import time
-import statistics
-import json
+from time import time
 from ga import GA
 
 
 def main():
-    random.seed(666)
+    seed(666)
     task_number = 50
     e = Environment(map_path='rendering/map.csv', save=False, run=False, task_number=task_number, scheduling="Greedy0",
                     simulation_name="test")
     e.task_handler.new_task_pool(task_number)
-    t = time.time()
-    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=50, n=task_number, m=8)
+    t = time()
+    ga = GA(0, e.ga_entrypoint, popsize=50, maxepoc=50, n=task_number, m=8)
     last_population = ga.run()
-    elapsed = time.time() - t
+    elapsed = time() - t
     print(last_population)
     print("Elapsed " + str(elapsed))
 
