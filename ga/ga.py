@@ -149,8 +149,7 @@ class GA:
         #initial = df
 
         for i in range(0, self.maxepoc):
-            print("Generazione:")
-            print(i)
+            print("Generation: "+str(i))
             if i >= 1000:
                 self.pmutation = 0.5
 

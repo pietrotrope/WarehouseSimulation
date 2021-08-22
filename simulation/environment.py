@@ -51,14 +51,16 @@ class Environment:
     def ga_entrypoint(self, task_number, scheduling):
         return self.new_simulation(task_number, run=True, save=False, scheduling=scheduling)
 
-    def new_simulation(self, task_number=100, run=True, save=False, scheduling=None, new_task_pool=False):
+    def new_simulation(self, task_number=100, run=True, save=False, scheduling=None, new_task_pool=False, simulation_name=None):
+        if simulation_name != None:
+            self.simulation_name = simulation_name
         self.time = 0
         self.scheduling = scheduling
         self.task_number = task_number
         if new_task_pool:
             self.task_handler.new_task_pool(task_number)
         else:
-            self.task_handler.task_pool = copy.deepcopy(self.task_handler.initial_task_pool)
+            self.task_handler.same_task_pool(task_number)
 
         self.save = save
         for agent in self.agents:

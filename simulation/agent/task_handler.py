@@ -34,6 +34,15 @@ class TaskHandler:
             self.task_pool[i + 1] = random.choice(self.pods)
         self.initial_task_pool = copy.copy(self.task_pool)
 
+    def same_task_pool(self, n):
+        self.n = n
+        self.scheduling = None
+        self.assigned_tasks = [-1 for _ in range(self.env.agent_number)]
+        self.picking_times = {}
+        if self.env.scheduling is not None:
+            self.scheduling = self.env.scheduling
+        self.task_pool = copy.deepcopy(self.initial_task_pool)
+
     def get_task(self, robot_id):
         if self.scheduling is not None:
             if self.scheduling == "Greedy0":
