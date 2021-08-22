@@ -19,7 +19,7 @@ import time
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=100, agent_number=8, scheduling=None,
+    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=100, agent_number=8, scheduling="Random",
                  save=False, run=True, simulation_name=""):
         self.simulation_name = simulation_name
         self.scheduling = scheduling
@@ -51,7 +51,7 @@ class Environment:
     def ga_entrypoint(self, task_number, scheduling):
         return self.new_simulation(task_number, run=True, save=False, scheduling=scheduling)
 
-    def new_simulation(self, task_number=100, run=True, save=False, scheduling=None, new_task_pool=False, simulation_name=None):
+    def new_simulation(self, task_number=100, run=True, save=False, scheduling="Random", new_task_pool=False, simulation_name=None):
         if simulation_name != None:
             self.simulation_name = simulation_name
         self.time = 0

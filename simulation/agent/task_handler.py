@@ -24,7 +24,7 @@ class TaskHandler:
 
     def new_task_pool(self, n):
         self.n = n
-        self.scheduling = None
+        self.scheduling = "Random"
         self.assigned_tasks = [-1 for _ in range(self.env.agent_number)]
         self.picking_times = {}
         if self.env.scheduling is not None:
@@ -36,7 +36,7 @@ class TaskHandler:
 
     def same_task_pool(self, n):
         self.n = n
-        self.scheduling = None
+        self.scheduling = "Random"
         self.assigned_tasks = [-1 for _ in range(self.env.agent_number)]
         self.picking_times = {}
         if self.env.scheduling is not None:
@@ -44,18 +44,15 @@ class TaskHandler:
         self.task_pool = copy.deepcopy(self.initial_task_pool)
 
     def get_task(self, robot_id):
-        if self.scheduling is not None:
-            if self.scheduling == "Greedy0":
-                return self._greedy_approach_0(robot_id)
-            elif self.scheduling == "Greedy1":
-                return self._greedy_approach_1(robot_id)
+        if type(self.scheduling) != str:
+            if self.scheduling[robot_id] == []:
+                return None
             else:
-                if self.scheduling[robot_id] == []:
-                    return None
-                else:
-                    selected_task = self.scheduling[robot_id].pop(0)
-                    return self.task_pool[selected_task]
-
+                return self.task_pool[self.scheduling[robot_id].pop(0)]
+        elif self.scheduling == "Greedy0":
+            return self._greedy_approach_0(robot_id)
+        elif self.scheduling == "Greedy1":
+            return self._greedy_approach_1(robot_id)
         else:
             if self.task_pool:
                 task_id = list(self.task_pool)[0]
