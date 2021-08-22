@@ -34,5 +34,6 @@ def main():
     e.new_simulation(task_number=task_number, save=True, scheduling="Greedy1", simulation_name="Greedy1")
     e.new_simulation(task_number=task_number, save=True, scheduling=None, simulation_name="random")
 
+
 if __name__ == '__main__':
     main()
