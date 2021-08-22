@@ -27,6 +27,7 @@ class Environment:
         self.map_shape = ()
         self.graph = None
         self.agents = {}
+        self.agent_number = agent_number
         self.raster_to_graph = {}
         self.__load_map(map_path)
         self.__gen_graph()
@@ -36,7 +37,6 @@ class Environment:
         self.time = 0
         self.task_pool = {}
         self.task_number = task_number
-        self.agent_number = agent_number
         self.save = save
 
         if self.graph is None or self.raster_map is None:
@@ -210,6 +210,7 @@ class Environment:
         task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
 
+
         for simulation_time in count(0):
             # Assign tasks
             for agent in self.agents:
@@ -220,7 +221,8 @@ class Environment:
                         task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
-                        task_ending_times[agent.id] = self.task_ending_time(agent)
+                        for update_agent in self.agents:
+                            task_ending_times[update_agent.id] = self.task_ending_time(update_agent)
 
             if self.simulation_ended(done):
                 if self.save:

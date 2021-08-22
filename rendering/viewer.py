@@ -13,14 +13,14 @@ import random
 
 class Screen:
 
-    def __init__(self, tile_size, screen_width=800, screen_height=600):
+    def __init__(self, tile_size, screen_width=800, screen_height=600, name="out.csv"):
         pygame.init()
         self.screen = pygame.display.set_mode((screen_width, screen_height))
         self.done = False
         self.tileSize = tile_size
         self.map = np.array(pd.read_csv('map.csv', header=None))
         self.history = []
-        with open('out.csv', 'r') as read_obj:
+        with open(name, 'r') as read_obj:
             csv_reader = reader(read_obj)
             for row in csv_reader:
                 self.history.append(row)
