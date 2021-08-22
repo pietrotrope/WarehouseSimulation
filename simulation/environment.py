@@ -5,8 +5,9 @@ import pandas as pd
 import numpy as np
 import csv
 import json
-from itertools import count
+import copy
 
+from itertools import count
 from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
@@ -47,11 +48,18 @@ class Environment:
         if run:
             self.run()
 
-    def new_simulation(self, task_number=100, run=True, save=False, scheduling=None):
+    def ga_entrypoint(self, task_number, scheduling):
+        return self.new_simulation(task_number, run=True, save=False, scheduling=scheduling)
+
+    def new_simulation(self, task_number=100, run=True, save=False, scheduling=None, new_task_pool=False):
         self.time = 0
         self.scheduling = scheduling
         self.task_number = task_number
-        self.task_handler.new_task_pool(task_number)
+        if new_task_pool:
+            self.task_handler.new_task_pool(task_number)
+        else:
+            self.task_handler.task_pool = copy.deepcopy(self.task_handler.initial_task_pool)
+
         self.save = save
         for agent in self.agents:
             agent.position = agent.home
@@ -64,7 +72,7 @@ class Environment:
             for y in range(self.map_shape[1]):
                 self.tile_map[x][y].timestamp.clear()
         if run:
-            self.run()
+            return self.run()
 
     def key_to_raster(self, key):
         return self.graph.get_node(key).coord
@@ -122,7 +130,7 @@ class Environment:
         agent_count = 0
 
         for i in range(self.map_shape[0]):
-            current_picking_station= -1
+            current_picking_station = -1
             for j in range(self.map_shape[1]):
                 if self.raster_map[i][j] == 4:
                     if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
@@ -182,8 +190,8 @@ class Environment:
         swap_phases = []
         for i in range(pos, to_time):
             moves.clear()
-            swap_phases.clear()            
-            for agent in self.agents:                    
+            swap_phases.clear()
+            for agent in self.agents:
                 if agent.task is not None:
                     collision = agent.detect_collision(i)
                     if collision:
@@ -196,7 +204,7 @@ class Environment:
                     else:
                         if agent.swap_phase[0] > 0:
                             agent.swap_phase[0] -= 1
-                            swap_phases.append((agent,agent.swap_phase[1]))
+                            swap_phases.append((agent, agent.swap_phase[1]))
                             if agent.swap_phase[0] == 0:
                                 agent.swap_phase[1] = agent.id
 
@@ -227,8 +235,8 @@ class Environment:
             if self.simulation_ended(done):
                 if self.save:
                     self.save_data()
-                break
-            
+                return self.compute_metrics()
+
             collision = self.make_step(min(task_ending_times) - self.time)
             while collision:
                 self.avoid_collision(collision)
@@ -238,8 +246,8 @@ class Environment:
 
                 task_ending_times[collision[2]] = self.task_ending_time(self.agents[collision[2]])
 
-                collision = self.make_step(min(task_ending_times)-self.time, collision[1])
-            
+                collision = self.make_step(min(task_ending_times) - self.time, collision[1])
+
             self.update_simulation_time(min(task_ending_times))
 
     def simulation_ended(self, done):
@@ -250,31 +258,43 @@ class Environment:
             agent.skip_to(new_time - self.time)
         self.time = new_time
 
+    def compute_metrics(self):
+        res = [agent.log for agent in self.agents]
+
+        TTC = 0
+        res_lengths = []
+        for r in res:
+            res_lengths.append(len(r))
+            TTC += len(r)
+
+        BU = min(res_lengths) / max(res_lengths)
+        TT = max(res_lengths)
+
+        return TT, TTC, BU
+
     def save_data(self):
         res = []
         for agent in self.agents:
             res.append(agent.log)
-        with open(self.simulation_name+"_out.csv", "w") as f:
+        with open(self.simulation_name + "_out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
-        
+
         ttc = 0
         res_lengths = []
         for r in res:
             res_lengths.append(len(r))
-            ttc+= len(r)
+            ttc += len(r)
 
-        bu = min(res_lengths)/max(res_lengths)
+        bu = min(res_lengths) / max(res_lengths)
 
-        with open(self.simulation_name+'_metrics.txt', 'w') as f:
+        with open(self.simulation_name + '_metrics.txt', 'w') as f:
             f.write('Total Time:\n')
             f.write(str(max(res_lengths)))
             f.write("\nTotal Travel Cost:\n")
             f.write(str(ttc))
             f.write("\nBalancing Utilization:\n")
             f.write(str(bu))
-        
-
 
     def avoid_collision(self, collision):
         collision_type, time, agent, other_agent = collision
@@ -285,6 +305,3 @@ class Environment:
             agent1.swap_phase = [2, agent2.id]
             agent2.shift_route(time)
             agent2.swap_phase = [2, agent1.id]
-
-            
-

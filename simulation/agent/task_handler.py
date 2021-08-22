@@ -3,6 +3,7 @@ import sys
 import queue
 import numpy as np
 import random
+import copy
 from random import randrange
 
 
@@ -17,6 +18,7 @@ class TaskHandler:
             self.scheduling = self.env.scheduling
         self.pods = env.get_pods()
         self.task_pool = {}
+        self.initial_task_pool = {}
         for i in range(n):
             self.task_pool[i + 1] = random.choice(self.pods)
 
@@ -30,6 +32,7 @@ class TaskHandler:
         self.task_pool = {}
         for i in range(n):
             self.task_pool[i + 1] = random.choice(self.pods)
+        self.initial_task_pool = copy.copy(self.task_pool)
 
     def get_task(self, robot_id):
         if self.scheduling is not None:
@@ -38,11 +41,11 @@ class TaskHandler:
             elif self.scheduling == "Greedy1":
                 return self._greedy_approach_1(robot_id)
             else:
-                if not self.scheduling[robot_id]:
+                if self.scheduling[robot_id] == []:
                     return None
                 else:
                     selected_task = self.scheduling[robot_id].pop(0)
-                return self.task_pool[selected_task]
+                    return self.task_pool[selected_task]
 
         else:
             if self.task_pool:
