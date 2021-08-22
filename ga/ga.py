@@ -1,5 +1,5 @@
-import numpy as np
-import pandas as pd
+from numpy import random, asarray, arange, ndarray, cumsum, concatenate, array
+from pandas import DataFrame
 
 
 class GA:
@@ -31,7 +31,7 @@ class GA:
         self.pselection = pselection
         self.n = n
         self.m = m
-        self.baseIndividual = np.arange(1, n + m)
+        self.baseIndividual = arange(1, n + m)
         self.initialPopulation = self.__generatepopulation(seed)
         self.simulation = simulation
 
@@ -51,7 +51,7 @@ class GA:
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
     def chromosome_to_schedule(self, chromosome):
-        if isinstance(chromosome, np.ndarray):
+        if isinstance(chromosome, ndarray):
             chromosome = chromosome.tolist()
         divisionpoints = list(range(self.n + 1, self.n + self.m, 1))
         last = 0
@@ -68,8 +68,8 @@ class GA:
         return schedule
 
     def __generatepopulation(self, seed):
-        np.random.seed(seed)
-        return np.asarray([np.random.permutation(self.baseIndividual) for i in range(self.popsize)])
+        random.seed(seed)
+        return asarray([random.permutation(self.baseIndividual) for i in range(self.popsize)])
 
     # population here must be a popsize x (n+m) dataframe, where the last column represents the fitness value
     def __selection(self, population):
@@ -80,13 +80,13 @@ class GA:
         remaining = population.iloc[t + 1:, :]
         sumfitness = sum(remaining.loc[:, lastcol])
         probabilities = [remaining.loc[i, lastcol] / sumfitness for i in range(t + 1, self.popsize)]
-        cumsum = np.cumsum(probabilities)
+        cumsums = cumsum(probabilities)
         selectedremaining = [0] * len(remaining)
         remaining = remaining.iloc[:, 0:lastcol]
         for i in range(len(remaining)):
-            r = np.random.rand()
-            for j in range(len(cumsum)):
-                if r <= cumsum[j]:
+            r = random.rand()
+            for j in range(len(cumsums)):
+                if r <= cumsums[j]:
                     selectedremaining[i] = j
                     break
         notelite = remaining.iloc[selectedremaining, 0:lastcol]
@@ -96,8 +96,8 @@ class GA:
     def crossover_pair(self, parent1, parent2):
         chromlen = self.n + self.m - 1
         half = chromlen // 2
-        a1 = np.random.randint(low=0, high=half)
-        a2 = np.random.randint(low=half, high=chromlen)
+        a1 = random.randint(low=0, high=half)
+        a2 = random.randint(low=half, high=chromlen)
 
         off1 = [0] * chromlen
         off2 = [0] * chromlen
@@ -122,15 +122,15 @@ class GA:
         newpopulation = [0] * len(population)
         for i in range(0, len(population), 2):
             newpopulation[i], newpopulation[i + 1] = self.crossover_pair(population[i, :], population[i + 1, :])
-        return np.array(newpopulation)
+        return array(newpopulation)
 
     # population here is a len(elite) x (n+m-1) np array
     def mutation(self, population):
         chromlen = len(population[0])
         for i in range(len(population)):
-            if np.random.rand() < self.pmutation:
-                pos1 = np.random.randint(chromlen)
-                pos2 = np.random.randint(chromlen)
+            if random.rand() < self.pmutation:
+                pos1 = random.randint(chromlen)
+                pos2 = random.randint(chromlen)
                 tmp = population[i, pos1]
                 population[i, pos1] = population[i, pos2]
                 population[i, pos2] = tmp
@@ -138,10 +138,10 @@ class GA:
 
     def run(self):
         # eval the initial population
-        fitness_and_metrics = np.asarray(list(map(self.__fitness, self.initialPopulation)))
+        fitness_and_metrics = asarray(list(map(self.__fitness, self.initialPopulation)))
 
         lastcol = self.n + self.m - 1
-        df = pd.DataFrame(self.initialPopulation)
+        df = DataFrame(self.initialPopulation)
         df[lastcol] = fitness_and_metrics[:, 0]
         df[lastcol + 1] = fitness_and_metrics[:, 1]
         df[lastcol + 2] = fitness_and_metrics[:, 2]
@@ -157,13 +157,13 @@ class GA:
             t = int(self.popsize * self.pselection - 1)
             elite = selected[0:t + 1]
             tmpcrossed = selected[t + 1:]
-            if np.random.rand() < self.pcrossover:
+            if random.rand() < self.pcrossover:
                 tmpcrossed = self.crossover(tmpcrossed)
             mutated = self.mutation(tmpcrossed)
 
-            offspring = np.concatenate((elite, mutated))
-            fitness_and_metrics = np.asarray(list(map(self.__fitness, offspring)))
-            df = pd.DataFrame(offspring)
+            offspring = concatenate((elite, mutated))
+            fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+            df = DataFrame(offspring)
             df[lastcol] = fitness_and_metrics[:, 0]
             df[lastcol + 1] = fitness_and_metrics[:, 1]
             df[lastcol + 2] = fitness_and_metrics[:, 2]
@@ -178,13 +178,13 @@ class GA:
                 t = int(self.popsize * self.pselection - 1)
                 elite = selected[0:t + 1]
                 tmpcrossed = selected[t + 1:]
-                if np.random.rand() < self.pcrossover:
+                if random.rand() < self.pcrossover:
                     tmpcrossed = self.crossover(tmpcrossed)
                 mutated = self.mutation(tmpcrossed)
 
-                offspring = np.concatenate((elite, mutated))
-                fitness_and_metrics = np.asarray(list(map(self.__fitness, offspring)))
-                df = pd.DataFrame(offspring)
+                offspring = concatenate((elite, mutated))
+                fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+                df = DataFrame(offspring)
                 df[lastcol] = fitness_and_metrics[:, 0]
                 df[lastcol + 1] = fitness_and_metrics[:, 1]
                 df[lastcol + 2] = fitness_and_metrics[:, 2]
