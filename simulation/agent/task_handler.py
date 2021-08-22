@@ -1,9 +1,7 @@
-import sys
-import queue
-import numpy as np
-import random
+from sys import maxsize
+from random import choice 
 import copy
-from random import randrange
+
 
 
 class TaskHandler:
@@ -19,7 +17,7 @@ class TaskHandler:
         self.task_pool = {}
         self.initial_task_pool = {}
         for i in range(n):
-            self.task_pool[i + 1] = random.choice(self.pods)
+            self.task_pool[i + 1] = choice(self.pods)
 
     def new_task_pool(self, n):
         self.n = n
@@ -30,7 +28,7 @@ class TaskHandler:
             self.scheduling = self.env.scheduling
         self.task_pool = {}
         for i in range(n):
-            self.task_pool[i + 1] = random.choice(self.pods)
+            self.task_pool[i + 1] = choice(self.pods)
         self.initial_task_pool = copy.copy(self.task_pool)
 
     def same_task_pool(self, n):
@@ -90,7 +88,7 @@ class TaskHandler:
             self.assigned_tasks[robot_id] = -1
         if self.task_pool:
             indexes = list(self.task_pool.keys())
-            new_task = [-1, sys.maxsize]
+            new_task = [-1, maxsize]
             id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id].position])
 
             other_robot_id = -1

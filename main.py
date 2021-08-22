@@ -1,13 +1,7 @@
-from os import stat
 import random
-from numpy.lib.function_base import average
-from numpy.lib.npyio import save
 from simulation.environment import Environment
 import time
-import statistics
-import json
 from ga import GA
-
 
 def main():
     random.seed(666)

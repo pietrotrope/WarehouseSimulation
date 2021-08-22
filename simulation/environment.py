@@ -1,11 +1,8 @@
-import simulation
 import sys
-
-import pandas as pd
+from pandas import read_csv
 import numpy as np
 import csv
 import json
-import copy
 
 from itertools import count
 from simulation.agent.agent import Agent
@@ -13,8 +10,6 @@ from simulation.agent.task_handler import TaskHandler
 from simulation.cell import Cell
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
-
-import time
 
 
 class Environment:
@@ -115,7 +110,7 @@ class Environment:
 
     def __load_map(self, map_path):
         map_path = 'map.csv' if map_path is None else map_path
-        self.raster_map = np.array(pd.read_csv(map_path, header=None))
+        self.raster_map = np.array(read_csv(map_path, header=None))
         self.map_shape = self.raster_map.shape
         self.__gen_tile_map()
 
@@ -188,8 +183,7 @@ class Environment:
         return self.time + len(agent.route)
 
     def make_step(self, to_time, pos=0):
-        moves = []
-        swap_phases = []
+        moves, swap_phases = [], []
         for i in range(pos, to_time):
             moves.clear()
             swap_phases.clear()
@@ -221,7 +215,7 @@ class Environment:
         done = [False for _ in range(self.agent_number)]
 
 
-        for simulation_time in count(0):
+        for _ in count(0):
             # Assign tasks
             for agent in self.agents:
                 if not agent.route:
@@ -269,9 +263,7 @@ class Environment:
             res_lengths.append(len(r))
             TTC += len(r)
 
-        BU = min(res_lengths) / max(res_lengths)
-        TT = max(res_lengths)
-
+        BU, TT  = min(res_lengths) / max(res_lengths), max(res_lengths)
         return TT, TTC, BU
 
     def save_data(self):

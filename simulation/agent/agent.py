@@ -1,8 +1,4 @@
 from simulation.tile import Tile
-from .direction import Direction
-import random
-import time
-
 
 class Agent:
 
@@ -60,8 +56,7 @@ class Agent:
         if delta > 0:
             if len(self.route) >= delta:
                 self.log += self.route[0:delta]
-                self.position = self.route[delta - 1]
-                self.route = self.route[delta:]
+                self.position, self.route = self.route[delta - 1], self.route[delta:]
             else:
                 if self.route:
                     self.position = self.route[-1]
@@ -74,19 +69,15 @@ class Agent:
     def detect_collision(self, i):
         # return collision_type, time, agent, other_agent
         x, y = self.route[i]
-
-        i_plus_env_time = i + self.env.time
-        agents = self.env.tile_map[x][y].timestamp[i_plus_env_time]
-        new_agents = self.env.tile_map[x][y].timestamp[i_plus_env_time + 1]
-        i_minus_one = i-1
-        route_i_minus_one = self.route[i_minus_one]
+        i_plus_env_time, i_minus_one = i + self.env.time, i-1
+        agents, new_agents, route_i_minus_one = self.env.tile_map[x][y].timestamp[i_plus_env_time], self.env.tile_map[x][y].timestamp[i_plus_env_time + 1], self.route[i_minus_one]
 
         if agents and agents[0] != self.id:
-            other_agent = self.env.agents[agents[0]]
             # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
             # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
             # o andarsene, cosi da agire di conseguenza
             if self.swap_phase[0] <= 0:
+                other_agent = self.env.agents[agents[0]]
                 if len(other_agent.route) > i:
                     # l'altro agente si muoverà
                     if i > 0:
@@ -119,14 +110,5 @@ class Agent:
                 if new_agents[0] != self.swap_phase[1]:
                     return 1, i, new_agents[0], -1
             else:
-                if i > 0:
-                    if self.route[i] == route_i_minus_one:
-                        return 1, i, new_agents[0], -1
-                    else:
-                        return 1, i, self.id, -1
-                else:
-                    if self.route[i] == self.position:
-                        return 1, i, new_agents[0], -1
-                    else:
-                        return 1, i, self.id, -1
+                return 1, i, self.id, -1
         return None
