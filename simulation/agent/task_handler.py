@@ -27,11 +27,14 @@ class TaskHandler:
 
     def get_task(self, robot_id):
         if self.scheduling is not None:
-            if not self.scheduling[robot_id]:
-                return None
+            if self.scheduling == "Greedy0":
+                return self._greedy_approach_0(robot_id)
             else:
-                selected_task = self.scheduling[robot_id].pop(0)
-            return self.task_pool[selected_task]
+                if not self.scheduling[robot_id]:
+                    return None
+                else:
+                    selected_task = self.scheduling[robot_id].pop(0)
+                return self.task_pool[selected_task]
 
         else:
             if self.task_pool:
@@ -41,3 +44,25 @@ class TaskHandler:
                 return task
             else:
                 return None
+
+    def _greedy_approach_0(self, robot_id):
+        if self.task_pool:
+            indexes = list(self.task_pool.keys())
+            new_task = [indexes[0], -1]
+            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id].position])
+            id_pod = str(self.env.raster_to_graph[self.task_pool[indexes[0]]])
+            new_task[1] = len(self.env.routes[id_robot][id_pod])
+
+            for possible_task in indexes:
+                id_pod = str(
+                    self.env.raster_to_graph[self.task_pool[possible_task]])
+                task_len = len(self.env.routes[id_robot][id_pod])
+                if task_len < new_task[1]:
+                    new_task[0] = possible_task
+                    new_task[1] = task_len
+                selected_task = self.task_pool[new_task[0]]
+            del self.task_pool[new_task[0]]
+            return selected_task
+        else:
+            return None
+

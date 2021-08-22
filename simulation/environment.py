@@ -46,8 +46,9 @@ class Environment:
         if run:
             self.run()
 
-    def new_simulation(self, task_number=100, run=True, save=False):
+    def new_simulation(self, task_number=100, run=True, save=False, scheduling=None):
         self.time = 0
+        self.scheduling = scheduling
         self.task_number = task_number
         self.task_handler.new_task_pool(task_number)
         self.save = save
@@ -253,6 +254,24 @@ class Environment:
         with open("./out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
+        
+        ttc = 0
+        res_lengths = []
+        for r in res:
+            res_lengths.append(len(r))
+            ttc+= len(r)
+
+        bu = min(res_lengths)/max(res_lengths)
+
+        with open('metrics.txt', 'w') as f:
+            f.write('Total Time:\n')
+            f.write(str(max(res_lengths)))
+            f.write("\nTotal Travel Cost:\n")
+            f.write(str(ttc))
+            f.write("\nBalancing Utilization:\n")
+            f.write(str(bu))
+        
+
 
     def avoid_collision(self, collision):
         collision_type, time, agent, other_agent = collision
