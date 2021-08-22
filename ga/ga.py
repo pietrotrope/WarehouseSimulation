@@ -88,7 +88,7 @@ class GA:
     # parent1, parent2: np array
     def crossover_pair(self, parent1, parent2):
         chromlen = self.n + self.m - 1
-        half = int(chromlen / 2)
+        half = chromlen // 2
         a1 = np.random.randint(low=0, high=half)
         a2 = np.random.randint(low=half, high=chromlen)
 
@@ -114,17 +114,14 @@ class GA:
     def crossover(self, population):
         newpopulation = [0] * len(population)
         for i in range(0, len(population), 2):
-            off1, off2 = self.crossover_pair(population[i, :], population[i + 1, :])
-            newpopulation[i] = off1
-            newpopulation[i + 1] = off2
+            newpopulation[i], newpopulation[i + 1] = self.crossover_pair(population[i, :], population[i + 1, :])
         return np.array(newpopulation)
 
     # population here is a len(elite) x (n+m-1) np array
     def mutation(self, population):
         chromlen = len(population[0])
         for i in range(len(population)):
-            r = np.random.rand()
-            if r < self.pmutation:
+            if np.random.rand() < self.pmutation:
                 pos1 = np.random.randint(chromlen)
                 pos2 = np.random.randint(chromlen)
                 tmp = population[i, pos1]
@@ -135,23 +132,19 @@ class GA:
     def run(self):
         # eval the initial population
         fitness_and_metrics = np.asarray(list(map(self.__fitness, self.initialPopulation)))
-        Fx = fitness_and_metrics[:, 0]
-        TT = fitness_and_metrics[:, 1]
-        TTC = fitness_and_metrics[:, 2]
-        BU = fitness_and_metrics[:, 3]
 
         lastcol = self.n + self.m - 1
         df = pd.DataFrame(self.initialPopulation)
-        df[lastcol] = Fx
-        df[lastcol + 1] = TT
-        df[lastcol + 2] = TTC
-        df[lastcol + 3] = BU
+        df[lastcol] = fitness_and_metrics[:, 0]
+        df[lastcol + 1] = fitness_and_metrics[:, 1]
+        df[lastcol + 2] = fitness_and_metrics[:, 2]
+        df[lastcol + 3] = fitness_and_metrics[:, 3]
         #initial = df
 
-        for i in range(0, self.maxepoc):
+        tmp = min(self.maxepoc, 1000)
+
+        for i in range(0, tmp):
             print("Generation: "+str(i))
-            if i >= 1000:
-                self.pmutation = 0.5
 
             selected = self.__selection(df)
             t = int(self.popsize * self.pselection - 1)
@@ -163,13 +156,32 @@ class GA:
 
             offspring = np.concatenate((elite, mutated))
             fitness_and_metrics = np.asarray(list(map(self.__fitness, offspring)))
-            Fx = fitness_and_metrics[:, 0]
-            TT = fitness_and_metrics[:, 1]
-            TTC = fitness_and_metrics[:, 2]
-            BU = fitness_and_metrics[:, 3]
             df = pd.DataFrame(offspring)
-            df[lastcol] = Fx
-            df[lastcol + 1] = TT
-            df[lastcol + 2] = TTC
-            df[lastcol + 3] = BU
+            df[lastcol] = fitness_and_metrics[:, 0]
+            df[lastcol + 1] = fitness_and_metrics[:, 1]
+            df[lastcol + 2] = fitness_and_metrics[:, 2]
+            df[lastcol + 3] = fitness_and_metrics[:, 3]
+
+        if self.maxepoc >= 1000:
+            self.pmutation = 0.5
+            for i in range(1000, self.maxepoc):
+                print("Generation: "+str(i))
+
+                selected = self.__selection(df)
+                t = int(self.popsize * self.pselection - 1)
+                elite = selected[0:t + 1]
+                tmpcrossed = selected[t + 1:]
+                if np.random.rand() < self.pcrossover:
+                    tmpcrossed = self.crossover(tmpcrossed)
+                mutated = self.mutation(tmpcrossed)
+
+                offspring = np.concatenate((elite, mutated))
+                fitness_and_metrics = np.asarray(list(map(self.__fitness, offspring)))
+                df = pd.DataFrame(offspring)
+                df[lastcol] = fitness_and_metrics[:, 0]
+                df[lastcol + 1] = fitness_and_metrics[:, 1]
+                df[lastcol + 2] = fitness_and_metrics[:, 2]
+                df[lastcol + 3] = fitness_and_metrics[:, 3]
+
+
         return df
