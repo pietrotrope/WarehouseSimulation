@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import random
-from simulation.environment import Environment
-import time
-=======
 from random import seed
 from simulation.environment import Environment
 from time import time
->>>>>>> b85a24cfe46845946215ee6b870f66f7d8c86d0d
 from ga import GA
 
 def main():
