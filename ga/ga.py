@@ -35,17 +35,17 @@ class GA:
 
     def __fitness(self, chromosome):
         scheduling = self.chromosome_to_schedule(chromosome)
-
-        TT, TTC, BU = self.simulation(scheduling)
-
+        TT, TTC, BU = self.simulation(task_number=self.n, scheduling=scheduling)
         maxtest = max([len(scheduling[i]) for i in range(self.m)])
         totaltest = self.n
         Fx = maxtest / TT + totaltest / TTC + BU
 
-        return Fx
+        return Fx, TT, TTC, BU
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
     def chromosome_to_schedule(self, chromosome):
+        if isinstance(chromosome, np.ndarray):
+            chromosome = chromosome.tolist()
         divisionpoints = list(range(self.n + 1, self.n + self.m, 1))
         last = 0
         k = 0
@@ -134,13 +134,23 @@ class GA:
 
     def run(self):
         # eval the initial population
-        Fx = list(map(self.__fitness, self.initialPopulation))
+        fitness_and_metrics = np.asarray(list(map(self.__fitness, self.initialPopulation)))
+        Fx = fitness_and_metrics[:, 0]
+        TT = fitness_and_metrics[:, 1]
+        TTC = fitness_and_metrics[:, 2]
+        BU = fitness_and_metrics[:, 3]
+
         lastcol = self.n + self.m - 1
         df = pd.DataFrame(self.initialPopulation)
         df[lastcol] = Fx
-        initial = df
+        df[lastcol + 1] = TT
+        df[lastcol + 2] = TTC
+        df[lastcol + 3] = BU
+        #initial = df
 
         for i in range(0, self.maxepoc):
+            print("Generazione:")
+            print(i)
             if i >= 1000:
                 self.pmutation = 0.5
 
@@ -152,11 +162,15 @@ class GA:
                 tmpcrossed = self.crossover(tmpcrossed)
             mutated = self.mutation(tmpcrossed)
 
-            # if np.random.rand() < self.pmutation:
-            # tmpmutated = self.mutation(tmpcrossed)
-
             offspring = np.concatenate((elite, mutated))
-            Fx = list(map(self.__fitness, offspring))
+            fitness_and_metrics = np.asarray(list(map(self.__fitness, offspring)))
+            Fx = fitness_and_metrics[:, 0]
+            TT = fitness_and_metrics[:, 1]
+            TTC = fitness_and_metrics[:, 2]
+            BU = fitness_and_metrics[:, 3]
             df = pd.DataFrame(offspring)
             df[lastcol] = Fx
-        return initial, df
+            df[lastcol + 1] = TT
+            df[lastcol + 2] = TTC
+            df[lastcol + 3] = BU
+        return df
