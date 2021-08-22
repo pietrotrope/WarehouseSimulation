@@ -39,11 +39,10 @@ class Agent:
                 movement = tuple(map(lambda i, j: i - j, start, end))
                 if self.env.raster_map[tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
                     route_to_ps.insert(0,
-                                       self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
-                                                                          end, (0, movement[1])))])
+                                       self.env.raster_to_graph[tuple(map(lambda i, j: i + j, end, (0, movement[1])))])
                 else:
-                    route_to_ps.insert(0, self.env.raster_to_graph[tuple(map(lambda i, j: i + j,
-                                                                             end, (movement[0], 0)))])
+                    route_to_ps.insert(0,
+                                       self.env.raster_to_graph[tuple(map(lambda i, j: i + j, end, (movement[0], 0)))])
                 route_to_ps.insert(0, route_to_pod[-1])
             route = [*route, *route_to_ps.copy()]
             route_to_ps.reverse()

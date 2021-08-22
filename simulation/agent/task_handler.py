@@ -1,4 +1,3 @@
-from os import posix_fadvise
 import sys
 import queue
 import numpy as np
