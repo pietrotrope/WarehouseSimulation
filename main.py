@@ -11,7 +11,7 @@ def main():
                     simulation_name="test")
     e.task_handler.new_task_pool(task_number)
     t = time()
-    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=10, n=task_number, m=8)
+    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=10, n=task_number, m=8, n_core=10)
     last_population = ga.run()
     elapsed = time() - t
     #print(last_population)

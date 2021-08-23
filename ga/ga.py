@@ -1,6 +1,7 @@
 from numpy import random, asarray, arange, ndarray, cumsum, concatenate, array
 from pandas import DataFrame
-
+import multiprocessing as mp
+manager = mp.Manager()
 
 class GA:
     n: int
@@ -20,19 +21,25 @@ class GA:
     # n: task number
     # m: bot number
     def __init__(self, seed, simulation, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2,
-                 n=50,
-                 m=8):
-        self.cache = {}
+                 n=50, m=8, n_core= 1):
+        self.cache = manager.dict()
         self.popsize = popsize
         self.maxepoc = maxepoc
         self.pcrossover = pcrossover
         self.pmutation = pmutation
         self.pselection = pselection
         self.n = n
+        global globaln
+        globaln = n
         self.m = m
+        global globalm
+        globalm = m
+        self.n_core = n_core
         self.baseIndividual = arange(1, n + m)
         self.initialPopulation = self.__generatepopulation(seed)
         self.simulation = simulation
+        global globalsimulation
+        globalsimulation = simulation
 
     def __fitness(self, chromosome):
         scheduling = self.chromosome_to_schedule(chromosome)
@@ -135,7 +142,17 @@ class GA:
 
     def run(self):
         # eval the initial population
-        fitness_and_metrics = asarray(list(map(self.__fitness, self.initialPopulation)))
+        fitness_and_metrics = None
+
+        if self.n_core > 1:
+            pool = mp.Pool(self.n_core)
+            fitness_and_metrics = pool.map(fitness, self.initialPopulation)
+            pool.close()
+            pool.join()
+        
+            fitness_and_metrics = asarray(fitness_and_metrics)
+        else:
+            fitness_and_metrics = asarray(list(map(self.__fitness, self.initialPopulation)))
 
         lastcol = self.n + self.m - 1
         df = DataFrame(self.initialPopulation)
@@ -159,7 +176,18 @@ class GA:
             mutated = self.mutation(tmpcrossed)
 
             offspring = concatenate((elite, mutated))
-            fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+        
+            if self.n_core > 1:
+                fitness_and_metrics = None
+                pool = mp.Pool(self.n_core)
+                fitness_and_metrics = pool.map(fitness, offspring)
+                pool.close()
+                pool.join()
+            
+                fitness_and_metrics = asarray(fitness_and_metrics)
+            else:
+                fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+
             df = DataFrame(offspring)
             df[lastcol] = fitness_and_metrics[:, 0]
             df[lastcol + 1] = fitness_and_metrics[:, 1]
@@ -180,10 +208,57 @@ class GA:
                 mutated = self.mutation(tmpcrossed)
 
                 offspring = concatenate((elite, mutated))
-                fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+
+                if self.n_core > 1:
+                    fitness_and_metrics = None
+                    pool = mp.Pool(self.n_core)
+                    fitness_and_metrics = pool.map(fitness, offspring)
+                    pool.close()
+                    pool.join()
+                
+                    fitness_and_metrics = asarray(fitness_and_metrics)
+                else:
+                    fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+
                 df = DataFrame(offspring)
                 df[lastcol] = fitness_and_metrics[:, 0]
                 df[lastcol + 1] = fitness_and_metrics[:, 1]
                 df[lastcol + 2] = fitness_and_metrics[:, 2]
                 df[lastcol + 3] = fitness_and_metrics[:, 3]
         return df
+
+
+cache = manager.dict()
+globaln = 0
+globalm = 0
+globalsimulation = -1
+
+def fitness(chromosome):
+    scheduling = chromosome_to_schedule(chromosome)
+    key = str(scheduling)
+    if key not in cache.keys():
+        TT, TTC, BU = globalsimulation(task_number=globaln, scheduling=scheduling)
+        maxtest = max([len(scheduling[i]) for i in range(globalm)])
+        totaltest = globaln
+        Fx = maxtest / TT + totaltest / TTC + BU
+        cache[key] = (Fx, TT, TTC, BU)
+        return (Fx, TT, TTC, BU)
+    return cache[key]
+
+    # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
+def chromosome_to_schedule(chromosome):
+    if isinstance(chromosome, ndarray):
+        chromosome = chromosome.tolist()
+    divisionpoints = list(range(globaln + 1, globaln + globalm, 1))
+    last = 0
+    k = 0
+    schedule = [0] * globalm
+    for i in range(len(chromosome)):
+        if chromosome[i] in divisionpoints:
+            schedule[k] = chromosome[last:i]
+            k += 1
+            last = i + 1
+        if k == globalm - 1:
+            break
+    schedule[k] = chromosome[last:]
+    return schedule
