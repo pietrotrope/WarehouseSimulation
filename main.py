@@ -3,17 +3,18 @@ from simulation.environment import Environment
 from time import time
 from ga import GA
 
+
 def main():
     seed(666)
-    task_number = 50
+    task_number = 100
     e = Environment(map_path='rendering/map.csv', save=False, run=False, task_number=task_number, scheduling="Greedy0",
                     simulation_name="test")
     e.task_handler.new_task_pool(task_number)
     t = time()
-    ga = GA(0, e.ga_entrypoint, popsize=50, maxepoc=50, n=task_number, m=8)
+    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=10, n=task_number, m=8)
     last_population = ga.run()
     elapsed = time() - t
-    print(last_population)
+    #print(last_population)
     print("Elapsed " + str(elapsed))
 
     Fx_col = len(last_population.columns) - 4

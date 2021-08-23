@@ -22,7 +22,6 @@ class GA:
     def __init__(self, seed, simulation, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2,
                  n=50,
                  m=8):
-        self.count = 0
         self.cache = {}
         self.popsize = popsize
         self.maxepoc = maxepoc
@@ -38,16 +37,14 @@ class GA:
     def __fitness(self, chromosome):
         scheduling = self.chromosome_to_schedule(chromosome)
         key = str(scheduling)
-        if key in self.cache.keys():
-            self.count += 1
-            return self.cache[key]
-        else:
+        if key not in self.cache.keys():
             TT, TTC, BU = self.simulation(task_number=self.n, scheduling=scheduling)
             maxtest = max([len(scheduling[i]) for i in range(self.m)])
             totaltest = self.n
             Fx = maxtest / TT + totaltest / TTC + BU
             self.cache[key] = (Fx, TT, TTC, BU)
             return Fx, TT, TTC, BU
+        return self.cache[key]
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
     def chromosome_to_schedule(self, chromosome):
@@ -189,7 +186,4 @@ class GA:
                 df[lastcol + 1] = fitness_and_metrics[:, 1]
                 df[lastcol + 2] = fitness_and_metrics[:, 2]
                 df[lastcol + 3] = fitness_and_metrics[:, 3]
-
-        print("Contatore accessi cache:")
-        print(self.count)
         return df
