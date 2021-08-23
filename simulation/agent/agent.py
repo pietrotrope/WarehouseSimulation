@@ -69,46 +69,26 @@ class Agent:
     def detect_collision(self, i):
         # return collision_type, time, agent, other_agent
         x, y = self.route[i]
-        i_plus_env_time, i_minus_one = i + self.env.time, i-1
-        agents, new_agents, route_i_minus_one = self.env.tile_map[x][y].timestamp[i_plus_env_time], self.env.tile_map[x][y].timestamp[i_plus_env_time + 1], self.route[i_minus_one]
+        i_plus_env_time, i_minus_one, other_agent = i + self.env.time, i-1, None
+        agents, new_agents, route_i_minus_one, ver2 = self.env.tile_map[x][y].timestamp[i_plus_env_time], self.env.tile_map[x][y].timestamp[i_plus_env_time + 1], self.route[i_minus_one], self.swap_phase[0] <= 0
+        ver, ver3 = new_agents and new_agents[0] != self.id, agents and agents[0] != self.id and ver2
+        if ver3:
+            other_agent = self.env.agents[agents[0]]
+        
+        if (not ver and not ver3):
+            return None
 
-        if agents and agents[0] != self.id:
-            # se ho raggiunto questa porzione di codice c'è al momento un agente dove voglio andare
-            # devo controllare se vuole spostarsi dove sono io, stare fermo dove voglio andare io,
-            # o andarsene, cosi da agire di conseguenza
-            if self.swap_phase[0] <= 0:
-                other_agent = self.env.agents[agents[0]]
-                if len(other_agent.route) > i:
-                    # l'altro agente si muoverà
-                    if i > 0:
-                        if other_agent.route[i] == route_i_minus_one:
-                            # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
-                            return 0, i, self.id, agents[0]
-                        if other_agent.route[i] == other_agent.route[i_minus_one]:
-                            # controllo se sta fermo e quindi devo stare fermo anche io
-                            return 1, i, self.id, -1
-                    else:
-                        if other_agent.route[i] == self.position:
-                            # controllo il caso in cui voglia venire dove sono io e quindi dobbiamo swappare
-                            return 0, i, self.id, agents[0]
-                        if other_agent.route[i] == other_agent.position:
-                            # controllo se sta fermo e quindi devo stare fermo anche io
-                            return 1, i, self.id, -1
-
-                    if other_agent.swap_phase[0] != 0:
-                        return 1, i, self.id, -1
-
-                    if new_agents and new_agents[0] != self.id:
-                        return 1, i, self.id, -1
-                else:
-                    # l'agente starà fermo qui, quindi attendo che finisca cosi prende una route
-                    return 1, i, self.id, -1
-        # al tempo attuale non c'è nessuno, vedo se quindi c'è qualcuno al tempo in cui voglio andarci
-        # se c'è qualcuno, controllo se io ero già qui o no. in caso attendo un turno
-        if new_agents and new_agents[0] != self.id:
-            if self.swap_phase[0] > 0:
-                if new_agents[0] != self.swap_phase[1]:
-                    return 1, i, new_agents[0], -1
-            else:
+        if ver3 and len(other_agent.route) > i and ((i>0 and other_agent.route[i] == route_i_minus_one) or (i<=0 and other_agent.route[i] == self.position)):
+            return 0, i, self.id, agents[0]
+        
+        if ver:
+            if ver2:
                 return 1, i, self.id, -1
+            else:
+                return 1, i, new_agents[0], -1   
+        
+        if ver3 and ((len(other_agent.route)<=i) or (i>0 and other_agent.route[i] == other_agent.route[i_minus_one]) or (i<=0 and other_agent.route[i] == other_agent.position) or(other_agent.swap_phase[0] != 0) or ver):
+            return 1, i, self.id, -1
+
         return None
+    

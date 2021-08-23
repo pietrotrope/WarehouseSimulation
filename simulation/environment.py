@@ -183,16 +183,16 @@ class Environment:
         return self.time + len(agent.route)
 
     def make_step(self, to_time, pos=0):
-        moves, swap_phases = [], []
+        moves, swap_phases = {}, []
         for i in range(pos, to_time):
             moves.clear()
             swap_phases.clear()
             for agent in self.agents:
-                if agent.task is not None:
+                if agent.task:
                     collision = agent.detect_collision(i)
                     if collision:
-                        for agent1, x1, y1, t in moves:
-                            self.tile_map[x1][y1].timestamp[t].remove(agent1.id)
+                        for ag_id, value in moves.items():
+                            self.tile_map[value[0]][value[1]].timestamp[value[2]].remove(ag_id)
                         for ag in swap_phases:
                             ag[0].swap_phase[0] += 1
                             ag[0].swap_phase[1] = ag[1]
@@ -207,7 +207,7 @@ class Environment:
                     x, y = agent.route[i]
                     i_plus_time_plus_one = i + self.time + 1
                     self.tile_map[x][y].timestamp[i_plus_time_plus_one].append(agent.id)
-                    moves.append((agent, x, y, i_plus_time_plus_one))
+                    moves[agent.id] =(x, y, i_plus_time_plus_one)
         return None
 
     def run(self):
