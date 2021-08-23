@@ -214,9 +214,9 @@ class Environment:
         task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
         done = [False for _ in range(self.agent_number)]
 
-
         for _ in count(0):
             # Assign tasks
+            ver = False
             for agent in self.agents:
                 if not agent.route:
                     done[agent.id] = agent.get_task()
@@ -225,13 +225,17 @@ class Environment:
                         task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
-                        for update_agent in self.agents:
-                            task_ending_times[update_agent.id] = self.task_ending_time(update_agent)
+                        ver = True
 
             if self.simulation_ended(done):
                 if self.save:
                     self.save_data()
                 return self.compute_metrics()
+                
+            if ver:
+                for update_agent in self.agents:
+                    if not done[update_agent.id]:
+                        task_ending_times[update_agent.id] = self.task_ending_time(update_agent)
 
             collision = self.make_step(min(task_ending_times) - self.time)
             while collision:
