@@ -69,27 +69,38 @@ class Agent:
 
     def detect_collision(self, i):
         # return collision_type, time, agent, other_agent
-        x, y = self.route[i]
-        i_plus_env_time, i_minus_one, other_agent = i + self.env.time, i-1, None
-        agents, new_agents, route_i_minus_one, ver2 = self.env.tile_map[x][y].timestamp[i_plus_env_time], self.env.tile_map[x][y].timestamp[i_plus_env_time + 1], self.route[i_minus_one], self.swap_phase[0] <= 0
-        ver, ver3 = new_agents and new_agents[0] != self.id, agents and agents[0] != self.id and ver2
+        a = self
+        x, y = a.route[i]
+        aid = a.id
+        en = a.env
+        i_plus_env_time, i_minus_one, timestamper = i + en.time, i-1, en.tile_map[x][y].timestamp
+        agents, new_agents, route_i_minus_one, ver2 = timestamper[i_plus_env_time], timestamper[i_plus_env_time + 1], a.route[i_minus_one], a.swap_phase[0] <= 0
+        ver, ver3 = new_agents and new_agents[0] != aid, agents and agents[0] != aid and ver2
         if ver3:
-            other_agent = self.env.agents[agents[0]]
-        
-        if (not ver and not ver3):
-            return None
+            other_agent = en.agents[agents[0]]
+            otmi = len(other_agent.route) > i
 
-        if ver3 and len(other_agent.route) > i and ((i>0 and other_agent.route[i] == route_i_minus_one) or (i<=0 and other_agent.route[i] == self.position)):
-            return 0, i, self.id, agents[0]
-        
-        if ver:
-            if ver2:
-                return 1, i, self.id, -1
+            if  otmi:
+                tbh = i>0
+                oar = other_agent.route[i]
+                if ((tbh and oar == route_i_minus_one) or (not tbh and oar == a.position)):
+                    return 0, i, aid, agents[0]
+                else:
+                    if ((tbh and oar == other_agent.route[i_minus_one]) or other_agent.swap_phase[0] or (not tbh and oar == other_agent.position)):
+                        return 1, i, aid, -1
             else:
-                return 1, i, new_agents[0], -1   
-        
-        if ver3 and ((len(other_agent.route)<=i) or (i>0 and other_agent.route[i] == other_agent.route[i_minus_one]) or (i<=0 and other_agent.route[i] == other_agent.position) or(other_agent.swap_phase[0] != 0) or ver):
-            return 1, i, self.id, -1
+                return 1, i, aid, -1
+   
+        else:
+            if not ver:
+                return None
+            else:
+                if ver2:
+                    return 1, i, aid, -1
+                else:
+                    return 1, i, new_agents[0], -1
 
+
+        if ver:
+            return 1, i, aid, -1
         return None
-    

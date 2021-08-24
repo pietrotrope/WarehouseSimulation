@@ -38,6 +38,8 @@ class TaskHandler:
         self.picking_times = {}
         if self.env.scheduling is not None:
             self.scheduling = self.env.scheduling
+            
+    def restore_task_pool(self):
         self.task_pool = copy.deepcopy(self.initial_task_pool)
 
     def get_task(self, robot_id):

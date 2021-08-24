@@ -67,7 +67,6 @@ class Environment:
             agent.route = []
             agent.time = 0
             agent.log = [agent.position]
-            agent.task_handler = self.task_handler
         for x in range(self.map_shape[0]):
             for y in range(self.map_shape[1]):
                 self.tile_map[x][y].timestamp.clear()
@@ -75,7 +74,7 @@ class Environment:
             return self.run()
 
     def key_to_raster(self, key):
-        return self.graph.get_node(key).coord
+        return self.graph.nodes[key].coord
 
     def __get_picking_stations_number(self):
         picking_stations_columns = np.count_nonzero(
@@ -101,12 +100,12 @@ class Environment:
 
     def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
         if coord is not None:
-            node = self.graph.get_node(self.raster_to_graph[coord])
+            node = self.graph[self.raster_to_graph[coord]]
             node.type = tile
             self.raster_map[coord[0]][coord[1]] = tile.value
             self.tile_map[coord[0]][coord[1]].tile = tile
         if key is not None:
-            node = self.graph.get_node(key)
+            node = self.graph[key]
             node.type = tile
             x, y = self.key_to_raster(key)[0]
             self.raster_map[x][y] = tile.value
