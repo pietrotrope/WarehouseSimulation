@@ -34,6 +34,9 @@ class Environment:
         self.task_pool = {}
         self.task_number = task_number
         self.save = save
+        self.moves, self.swap_phases = {}, []
+        self.task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
+        self.done = [False for _ in range(self.agent_number)]
 
         if self.graph is None or self.raster_map is None:
             raise Exception("Error while Initializing environment")
@@ -183,72 +186,72 @@ class Environment:
         return self.time + len(agent.route)
 
     def make_step(self, to_time, pos=0):
-        moves, swap_phases = {}, []
         for i in range(pos, to_time):
-            moves.clear()
-            swap_phases.clear()
+            self.moves.clear()
+            self.swap_phases.clear()
             for agent in self.agents:
                 if agent.task:
                     collision = agent.detect_collision(i)
                     if collision:
-                        for ag_id, value in moves.items():
+                        for ag_id, value in self.moves.items():
                             self.tile_map[value[0]][value[1]].timestamp[value[2]].remove(ag_id)
-                        for ag in swap_phases:
+                        for ag in self.swap_phases:
                             ag[0].swap_phase[0] += 1
                             ag[0].swap_phase[1] = ag[1]
                         return collision
                     else:
                         if agent.swap_phase[0] > 0:
                             agent.swap_phase[0] -= 1
-                            swap_phases.append((agent, agent.swap_phase[1]))
+                            self.swap_phases.append((agent, agent.swap_phase[1]))
                             if agent.swap_phase[0] == 0:
                                 agent.swap_phase[1] = agent.id
 
                     x, y = agent.route[i]
                     i_plus_time_plus_one = i + self.time + 1
                     self.tile_map[x][y].timestamp[i_plus_time_plus_one].append(agent.id)
-                    moves[agent.id] =(x, y, i_plus_time_plus_one)
+                    self.moves[agent.id] =(x, y, i_plus_time_plus_one)
         return None
 
     def run(self):
-        task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
-        done = [False for _ in range(self.agent_number)]
+        for i in range(self.agent_number):
+            self.task_ending_times[i] = sys.maxsize
+            self.done[i] = False
 
         for _ in count(0):
             # Assign tasks
             ver = False
             for agent in self.agents:
                 if not agent.route:
-                    done[agent.id] = agent.get_task()
-                    if done[agent.id]:
+                    self.done[agent.id] = agent.get_task()
+                    if self.done[agent.id]:
                         agent.position = agent.home
-                        task_ending_times[agent.id] = sys.maxsize
+                        self.task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
                         ver = True
 
-            if self.simulation_ended(done):
+            if self.simulation_ended(self.done):
                 if self.save:
                     self.save_data()
                 return self.compute_metrics()
                 
             if ver:
                 for update_agent in self.agents:
-                    if not done[update_agent.id]:
-                        task_ending_times[update_agent.id] = self.task_ending_time(update_agent)
+                    if not self.done[update_agent.id]:
+                        self.task_ending_times[update_agent.id] = self.task_ending_time(update_agent)
 
-            collision = self.make_step(min(task_ending_times) - self.time)
+            collision = self.make_step(min(self.task_ending_times) - self.time)
             while collision:
                 self.avoid_collision(collision)
 
                 if collision[3] != -1:
-                    task_ending_times[collision[3]] = self.task_ending_time(self.agents[collision[3]])
+                    self.task_ending_times[collision[3]] = self.task_ending_time(self.agents[collision[3]])
 
-                task_ending_times[collision[2]] = self.task_ending_time(self.agents[collision[2]])
+                self.task_ending_times[collision[2]] = self.task_ending_time(self.agents[collision[2]])
 
-                collision = self.make_step(min(task_ending_times) - self.time, collision[1])
+                collision = self.make_step(min(self.task_ending_times) - self.time, collision[1])
 
-            self.update_simulation_time(min(task_ending_times))
+            self.update_simulation_time(min(self.task_ending_times))
 
     def simulation_ended(self, done):
         return done.count(True) == len(done)
@@ -259,15 +262,9 @@ class Environment:
         self.time = new_time
 
     def compute_metrics(self):
-        res = [agent.log for agent in self.agents]
-
-        TTC = 0
-        res_lengths = []
-        for r in res:
-            res_lengths.append(len(r))
-            TTC += len(r)
-
-        BU, TT  = min(res_lengths) / max(res_lengths), max(res_lengths)
+        res = [len(agent.log) for agent in self.agents]
+        TTC = sum(res)
+        BU, TT  = min(res) / max(res), max(res)
         return TT, TTC, BU
 
     def save_data(self):
@@ -283,7 +280,6 @@ class Environment:
         for r in res:
             res_lengths.append(len(r))
             ttc += len(r)
-
         bu = min(res_lengths) / max(res_lengths)
 
         with open(self.simulation_name + '_metrics.txt', 'w') as f:

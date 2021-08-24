@@ -55,12 +55,13 @@ class Agent:
     def skip_to(self, delta):
         if delta > 0:
             if len(self.route) >= delta:
-                self.log += self.route[0:delta]
-                self.position, self.route = self.route[delta - 1], self.route[delta:]
+                self.log = [*(self.log), *(self.route[0:delta])]
+                self.position = self.route[delta - 1]
+                del self.route[:delta]
             else:
                 if self.route:
                     self.position = self.route[-1]
-                    self.log += self.route
+                    self.log = [*(self.log), *(self.route)]
                     self.route.clear()
                 else:
                     self.position = self.home
