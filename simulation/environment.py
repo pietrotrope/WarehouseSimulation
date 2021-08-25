@@ -27,8 +27,10 @@ class Environment:
         self.agents = {}
         self.agent_number = agent_number
         self.raster_to_graph = {}
+        self.graph_to_raster = {}
         self.__load_map(map_path)
         self.__gen_graph()
+        self.__gen_graph_map()
         self.pods = self._get_pods()
         self.task_handler = TaskHandler(self, task_number)
         self.__spawn_agents(cfg_path)
@@ -51,7 +53,8 @@ class Environment:
     def ga_entrypoint(self, task_number, scheduling):
         return self.new_simulation(task_number, run=True, save=False, scheduling=scheduling)
 
-    def new_simulation(self, task_number=100, run=True, save=False, scheduling="Random", new_task_pool=False, simulation_name=None):
+    def new_simulation(self, task_number=100, run=True, save=False, scheduling="Random", new_task_pool=False,
+                       simulation_name=None):
         if simulation_name != None:
             self.simulation_name = simulation_name
         self.time = 0
@@ -169,6 +172,10 @@ class Environment:
                 self.raster_to_graph[picking_station[0]])
             node.coord = picking_station
 
+    def __gen_graph_map(self):
+        for node in self.graph.nodes:
+            self.graph_to_raster[node.id] = self.key_to_raster(node.id)
+
     def __gen_tile_map(self):
         self.timestamp = [[defaultdict(list) for _ in row] for row in self.raster_map]
         # self.tile_map = [[Cell(Tile(cell)) for cell in row] for row in self.raster_map]
@@ -235,7 +242,7 @@ class Environment:
                 if self.save:
                     self.save_data()
                 return self.compute_metrics()
-                
+
             if ver:
                 for update_agent in self.agents:
                     if not self.done[update_agent.id]:
@@ -265,7 +272,7 @@ class Environment:
     def compute_metrics(self):
         res = [len(agent.log) for agent in self.agents]
         TTC = sum(res)
-        BU, TT  = min(res) / max(res), max(res)
+        BU, TT = min(res) / max(res), max(res)
         return TT, TTC, BU
 
     def save_data(self):

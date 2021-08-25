@@ -30,8 +30,8 @@ class Agent:
 
             route_to_ps = self.env.routes[id_pod].copy()
             if route_to_pod[-1] != route_to_ps[0]:
-                start = self.env.key_to_raster(route_to_ps[0])[0]
-                end = self.env.key_to_raster(route_to_pod[-1])[0]
+                start = self.env.graph_to_raster[route_to_ps[0]][0]
+                end = self.env.graph_to_raster[route_to_pod[-1]][0]
                 movement = tuple(map(lambda i, j: i - j, start, end))
                 if self.env.raster_map[tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
                     route_to_ps.insert(0,
@@ -43,7 +43,7 @@ class Agent:
             route = [*route, *route_to_ps.copy()]
             route_to_ps.reverse()
             route = [*route, *route_to_ps]
-            self.route = [self.env.key_to_raster(cell)[0] for cell in route]
+            self.route = [self.env.graph_to_raster[cell][0] for cell in route]
             return False
 
     def shift_route(self, i):
