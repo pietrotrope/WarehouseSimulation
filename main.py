@@ -1,5 +1,9 @@
 from multiprocessing import freeze_support
 from random import seed
+
+import numpy as np
+from tqdm import tqdm, trange
+
 from simulation.environment import Environment
 from time import time
 from ga import GA
@@ -18,7 +22,7 @@ def main():
     elapsed = time() - t
     enable()
     #print(last_population)
-    print("Elapsed " + str(elapsed))
+    # print("Elapsed " + str(elapsed))
 
     Fx_col = len(last_population.columns) - 4
     Fx = last_population.loc[:, Fx_col]
@@ -35,6 +39,12 @@ def main():
     e.new_simulation(task_number=task_number, save=True, scheduling=None, simulation_name="random")
     e.task_handler.restore_task_pool()
 
+    return elapsed
+
 
 if __name__ == '__main__':
-    main()
+    times = np.zeros(100)
+    for i in trange(100):
+        times[i] = main()
+
+    print('avg: {}, std: {}'.format(np.average(times), np.std(times)))

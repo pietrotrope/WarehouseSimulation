@@ -1,6 +1,9 @@
 from numpy import random, asarray, arange, ndarray, cumsum, concatenate, array
 from pandas import DataFrame
 import multiprocessing as mp
+
+from tqdm import trange, tqdm
+
 manager = mp.Manager()
 
 class GA:
@@ -164,8 +167,8 @@ class GA:
 
         tmp = min(self.maxepoc, 1000)
 
-        for i in range(0, tmp):
-            print("Generation: " + str(i))
+        for i in tqdm(range(0, tmp), leave=False):
+            #print("Generation: " + str(i))
 
             selected = self.__selection(df)
             t = int(self.popsize * self.pselection - 1)
@@ -196,8 +199,8 @@ class GA:
 
         if self.maxepoc >= 1000:
             self.pmutation = 0.5
-            for i in range(1000, self.maxepoc):
-                print("Generation: " + str(i))
+            for i in tqdm(range(1000, self.maxepoc), leave=False):
+                #print("Generation: " + str(i))
 
                 selected = self.__selection(df)
                 t = int(self.popsize * self.pselection - 1)
