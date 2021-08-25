@@ -73,7 +73,7 @@ class Agent:
         x, y = a.route[i]
         aid = a.id
         en = a.env
-        i_plus_env_time, i_minus_one, timestamper = i + en.time, i-1, en.tile_map[x][y].timestamp
+        i_plus_env_time, i_minus_one, timestamper = i + en.time, i-1, en.timestamp[x][y]
         agents, new_agents, route_i_minus_one, ver2 = timestamper[i_plus_env_time], timestamper[i_plus_env_time + 1], a.route[i_minus_one], a.swap_phase[0] <= 0
         ver, ver3 = new_agents and new_agents[0] != aid, agents and agents[0] != aid and ver2
         if ver3:

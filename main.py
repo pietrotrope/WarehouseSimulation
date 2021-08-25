@@ -1,3 +1,4 @@
+from multiprocessing import freeze_support
 from random import seed
 from simulation.environment import Environment
 from time import time

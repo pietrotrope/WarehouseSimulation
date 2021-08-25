@@ -3,7 +3,6 @@ from random import choice
 import copy
 
 
-
 class TaskHandler:
     def __init__(self, env, n):
         self.env = env
@@ -44,10 +43,10 @@ class TaskHandler:
 
     def get_task(self, robot_id):
         if type(self.scheduling) != str:
-            if self.scheduling[robot_id] == []:
-                return None
-            else:
+            if self.scheduling[robot_id]:
                 return self.task_pool[self.scheduling[robot_id].pop(0)]
+            else:
+                return None
         elif self.scheduling == "Greedy0":
             return self._greedy_approach_0(robot_id)
         elif self.scheduling == "Greedy1":

@@ -1,4 +1,6 @@
 import sys
+from collections import defaultdict
+
 from pandas import read_csv
 import numpy as np
 import csv
@@ -19,7 +21,7 @@ class Environment:
         self.simulation_name = simulation_name
         self.scheduling = scheduling
         self.raster_map = None
-        self.tile_map = None
+        self.timestamp = None
         self.map_shape = ()
         self.graph = None
         self.agents = {}
@@ -69,7 +71,7 @@ class Environment:
             agent.log = [agent.position]
         for x in range(self.map_shape[0]):
             for y in range(self.map_shape[1]):
-                self.tile_map[x][y].timestamp.clear()
+                self.timestamp[x][y].clear()
         if run:
             return self.run()
 
@@ -103,7 +105,6 @@ class Environment:
             node = self.graph[self.raster_to_graph[coord]]
             node.type = tile
             self.raster_map[coord[0]][coord[1]] = tile.value
-            self.tile_map[coord[0]][coord[1]].tile = tile
         if key is not None:
             node = self.graph[key]
             node.type = tile
@@ -169,7 +170,8 @@ class Environment:
             node.coord = picking_station
 
     def __gen_tile_map(self):
-        self.tile_map = [[Cell(Tile(cell)) for cell in row] for row in self.raster_map]
+        self.timestamp = [[defaultdict(list) for _ in row] for row in self.raster_map]
+        # self.tile_map = [[Cell(Tile(cell)) for cell in row] for row in self.raster_map]
 
     def __spawn_agents(self, cfg_path):
         positions = self.agents
@@ -193,7 +195,7 @@ class Environment:
                     collision = agent.detect_collision(i)
                     if collision:
                         for ag_id, value in self.moves.items():
-                            self.tile_map[value[0]][value[1]].timestamp[value[2]].remove(ag_id)
+                            self.timestamp[value[0]][value[1]][value[2]].remove(ag_id)
                         for ag in self.swap_phases:
                             ag[0].swap_phase[0] += 1
                             ag[0].swap_phase[1] = ag[1]
@@ -207,8 +209,8 @@ class Environment:
 
                     x, y = agent.route[i]
                     i_plus_time_plus_one = i + self.time + 1
-                    self.tile_map[x][y].timestamp[i_plus_time_plus_one].append(agent.id)
-                    self.moves[agent.id] =(x, y, i_plus_time_plus_one)
+                    self.timestamp[x][y][i_plus_time_plus_one].append(agent.id)
+                    self.moves[agent.id] = (x, y, i_plus_time_plus_one)
         return None
 
     def run(self):
