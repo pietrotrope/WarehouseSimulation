@@ -12,7 +12,7 @@ class TaskHandler:
         self.n = n
         scheduling = self.env.scheduling
 
-        self.scheduling = scheduling if len(scheduling) != 8 else [deque(s for s in scheduling)]
+        self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
 
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
@@ -31,7 +31,7 @@ class TaskHandler:
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         if self.env.scheduling is not None:
-            self.scheduling = scheduling if len(scheduling) != 8 else [deque(s for s in scheduling)]
+            self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
         self.task_pool = {i+1: choice(pods) for i in range(n)}
         self.initial_task_pool = copy.copy(self.task_pool)
 
@@ -42,7 +42,7 @@ class TaskHandler:
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         if self.env.scheduling is not None:
-            self.scheduling = scheduling if len(scheduling) != 8 else [deque(s for s in scheduling)]
+            self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
             
     def restore_task_pool(self):
         self.task_pool = copy.deepcopy(self.initial_task_pool)
@@ -51,7 +51,8 @@ class TaskHandler:
         scheduling = self.scheduling
         if len(scheduling) == 8:
             if scheduling[robot_id]:
-                return self.task_pool[scheduling[robot_id].popleft()]
+                a = self.task_pool[scheduling[robot_id].popleft()]
+                return a
             else:
                 return None
         elif self.scheduling == "Greedy0":
