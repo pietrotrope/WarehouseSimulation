@@ -1,13 +1,19 @@
 from sys import maxsize
-from random import choice 
+from random import choice
+from collections import deque
 import copy
+
+import schedule as schedule
 
 
 class TaskHandler:
     def __init__(self, env, n):
         self.env = env
         self.n = n
-        self.scheduling = self.env.scheduling
+        scheduling = self.env.scheduling
+
+        self.scheduling = scheduling if len(scheduling) != 8 else [deque(s for s in scheduling)]
+
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         self.pods = env.get_pods()
@@ -17,32 +23,35 @@ class TaskHandler:
             self.task_pool[i + 1] = choice(self.pods)
 
     def new_task_pool(self, n):
+        scheduling = self.env.scheduling
+        pods = self.pods
+
         self.n = n
         self.scheduling = "Random"
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         if self.env.scheduling is not None:
-            self.scheduling = self.env.scheduling
-        self.task_pool = {}
-        for i in range(n):
-            self.task_pool[i + 1] = choice(self.pods)
+            self.scheduling = scheduling if len(scheduling) != 8 else [deque(s for s in scheduling)]
+        self.task_pool = {i+1: choice(pods) for i in range(n)}
         self.initial_task_pool = copy.copy(self.task_pool)
 
     def same_task_pool(self, n):
+        scheduling = self.env.scheduling
         self.n = n
         self.scheduling = "Random"
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         if self.env.scheduling is not None:
-            self.scheduling = self.env.scheduling
+            self.scheduling = scheduling if len(scheduling) != 8 else [deque(s for s in scheduling)]
             
     def restore_task_pool(self):
         self.task_pool = copy.deepcopy(self.initial_task_pool)
 
     def get_task(self, robot_id):
-        if len(self.scheduling) == 8:
-            if self.scheduling[robot_id]:
-                return self.task_pool[self.scheduling[robot_id].pop(0)]
+        scheduling = self.scheduling
+        if len(scheduling) == 8:
+            if scheduling[robot_id]:
+                return self.task_pool[scheduling[robot_id].popleft()]
             else:
                 return None
         elif self.scheduling == "Greedy0":
