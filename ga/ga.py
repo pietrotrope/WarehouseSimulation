@@ -4,7 +4,6 @@ import multiprocessing as mp
 
 from tqdm import trange, tqdm
 
-manager = mp.Manager()
 
 class GA:
     n: int
@@ -24,7 +23,7 @@ class GA:
     # n: task number
     # m: bot number
     def __init__(self, seed, simulation, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2,
-                 n=50, m=8, n_core= 1):
+                 n=50, m=8, n_core=1):
         self.cache = {}
         self.popsize = popsize
         self.maxepoc = maxepoc
@@ -37,6 +36,9 @@ class GA:
         self.m = m
         global globalm
         globalm = m
+        if n_core > 1:
+            global cache
+            cache = mp.Manager().dict()
         self.n_core = n_core
         self.baseIndividual = arange(1, n + m)
         self.initialPopulation = self.__generatepopulation(seed)
@@ -47,52 +49,64 @@ class GA:
     def __fitness(self, chromosome):
         scheduling = self.chromosome_to_schedule(chromosome)
         key = str(scheduling)
+        n = self.n
+        m = self.m
         if key not in self.cache.keys():
-            TT, TTC, BU = self.simulation(task_number=self.n, scheduling=scheduling)
-            maxtest = max([len(scheduling[i]) for i in range(self.m)])
-            totaltest = self.n
-            Fx = maxtest / TT + totaltest / TTC + BU
+            TT, TTC, BU = self.simulation(task_number=n, scheduling=scheduling)
+            maxtest = max([len(scheduling[i]) for i in range(m)])
+            Fx = maxtest / TT + n / TTC + BU
             self.cache[key] = (Fx, TT, TTC, BU)
-            return Fx, TT, TTC, BU
+            return (Fx, TT, TTC, BU)
         return self.cache[key]
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
     def chromosome_to_schedule(self, chromosome):
         if isinstance(chromosome, ndarray):
             chromosome = chromosome.tolist()
-        divisionpoints = list(range(self.n + 1, self.n + self.m, 1))
+        n = self.n
+        m = self.m
+        m_minus_one = m - 1
+        len_chromosome = len(chromosome)
+        divisionpoints = list(range(n + 1, n + m, 1))
         last = 0
         k = 0
-        schedule = [0] * self.m
-        for i in range(len(chromosome)):
+        schedule = [0] * m
+        for i in range(len_chromosome):
             if chromosome[i] in divisionpoints:
                 schedule[k] = chromosome[last:i]
                 k += 1
                 last = i + 1
-            if k == self.m - 1:
+            if k == m_minus_one:
                 break
         schedule[k] = chromosome[last:]
         return schedule
 
     def __generatepopulation(self, seed):
         random.seed(seed)
-        return asarray([random.permutation(self.baseIndividual) for i in range(self.popsize)])
+        popsize = self.popsize
+        return asarray([random.permutation(self.baseIndividual) for i in range(popsize)])
 
     # population here must be a popsize x (n+m) dataframe, where the last column represents the fitness value
     def __selection(self, population):
-        lastcol = self.n + self.m - 1
+        n = self.n
+        m = self.m
+        popsize = self.popsize
+        lastcol = n + m - 1
         population = population.sort_values(lastcol, ascending=False, ignore_index=True)
-        t = int(self.popsize * self.pselection - 1)
-        elite = population.iloc[0:t + 1, 0:lastcol]
-        remaining = population.iloc[t + 1:, :]
+        t = int(popsize * self.pselection - 1)
+        t_plus_one = t + 1
+        elite = population.iloc[0:t_plus_one, 0:lastcol]
+        remaining = population.iloc[t_plus_one:, :]
         sumfitness = sum(remaining.loc[:, lastcol])
-        probabilities = [remaining.loc[i, lastcol] / sumfitness for i in range(t + 1, self.popsize)]
+        probabilities = [remaining.loc[i, lastcol] / sumfitness for i in range(t_plus_one, popsize)]
         cumsums = cumsum(probabilities)
-        selectedremaining = [0] * len(remaining)
+        len_remaining = len(remaining)
+        len_cumsums = len(cumsums)
+        selectedremaining = [0] * len_remaining
         remaining = remaining.iloc[:, 0:lastcol]
-        for i in range(len(remaining)):
+        for i in range(len_remaining):
             r = random.rand()
-            for j in range(len(cumsums)):
+            for j in range(len_cumsums):
                 if r <= cumsums[j]:
                     selectedremaining[i] = j
                     break
@@ -105,82 +119,108 @@ class GA:
         half = chromlen // 2
         a1 = random.randint(low=0, high=half)
         a2 = random.randint(low=half, high=chromlen)
+        a2_plus_one = a2 + 1
+        len_block = a2_plus_one - a1
+        a2_minus_a1 = a2 - a1
 
         off1 = [0] * chromlen
         off2 = [0] * chromlen
 
-        off1[0:(a2 - a1 + 1)] = parent2[a1:a2 + 1]
-        off2[0:(a2 - a1 + 1)] = parent1[a1:a2 + 1]
+        off1[0:len_block] = parent2[a1:a2_plus_one]
+        off2[0:len_block] = parent1[a1:a2_plus_one]
+
+        block1, block2 = off1[0:len_block], off2[0:len_block]
 
         k1 = 1
         k2 = 1
         for i in range(chromlen):
-            if parent1[i] not in off1[0:(a2 - a1 + 1)]:
-                off1[a2 - a1 + k1] = parent1[i]
+            if parent1[i] not in block1:
+                off1[a2_minus_a1 + k1] = parent1[i]
                 k1 += 1
-            if parent2[i] not in off2[0:(a2 - a1 + 1)]:
-                off2[a2 - a1 + k2] = parent2[i]
+            if parent2[i] not in block2:
+                off2[a2_minus_a1 + k2] = parent2[i]
                 k2 += 1
 
         return off1, off2
 
     # population: np array
     def crossover(self, population):
-        newpopulation = [0] * len(population)
-        for i in range(0, len(population), 2):
-            newpopulation[i], newpopulation[i + 1] = self.crossover_pair(population[i, :], population[i + 1, :])
+        len_population = len(population)
+        newpopulation = [0] * len_population
+        for i in range(0, len_population, 2):
+            i_plus_one = i + 1
+            newpopulation[i], newpopulation[i_plus_one] = self.crossover_pair(population[i, :],
+                                                                              population[i_plus_one, :])
         return array(newpopulation)
 
     # population here is a len(elite) x (n+m-1) np array
     def mutation(self, population):
         chromlen = len(population[0])
-        for i in range(len(population)):
-            if random.rand() < self.pmutation:
+        len_population = len(population)
+        pmutation = self.pmutation
+        for i in range(len_population):
+            if random.rand() < pmutation:
                 pos1 = random.randint(chromlen)
                 pos2 = random.randint(chromlen)
-                tmp = population[i, pos1]
-                population[i, pos1] = population[i, pos2]
-                population[i, pos2] = tmp
+                population[i, pos1], population[i, pos2] = population[i, pos2], population[i, pos1]
         return population
 
     def run(self):
         # eval the initial population
         fitness_and_metrics = None
+        n_core = self.n_core
+        ismultiprocessing = n_core > 1
+        n = self.n
+        m = self.m
+        pcrossover = self.pcrossover
+        pselection = self.pselection
+        popsize = self.popsize
+        maxepoc = self.maxepoc
+        initialPopulation = self.initialPopulation
 
-        if self.n_core > 1:
-            pool = mp.Pool(self.n_core)
-            fitness_and_metrics = asarray(pool.map(fitness, self.initialPopulation))
+        if ismultiprocessing:
+            pool = mp.Pool(n_core)
+            fitness_and_metrics = asarray(pool.map(fitness, initialPopulation))
             pool.close()
             pool.join()
         else:
-            fitness_and_metrics = asarray(list(map(self.__fitness, self.initialPopulation)))
+            fitness_and_metrics = asarray(list(map(self.__fitness, initialPopulation)))
 
-        lastcol = self.n + self.m - 1
-        df = DataFrame(self.initialPopulation)
+        lastcol = n + m - 1
+        lastcol_plus_one = lastcol + 1
+        lastcol_plus_two = lastcol + 2
+        lastcol_plus_three = lastcol + 3
+        df = DataFrame(initialPopulation)
         df[lastcol] = fitness_and_metrics[:, 0]
-        df[lastcol + 1] = fitness_and_metrics[:, 1]
-        df[lastcol + 2] = fitness_and_metrics[:, 2]
-        df[lastcol + 3] = fitness_and_metrics[:, 3]
+        df[lastcol_plus_one] = fitness_and_metrics[:, 1]
+        df[lastcol_plus_two] = fitness_and_metrics[:, 2]
+        df[lastcol_plus_three] = fitness_and_metrics[:, 3]
+
+        current_best_Fx = max(df.loc[:, lastcol])
+        last_improvement_gen = -1
+
         # initial = df
 
-        tmp = min(self.maxepoc, 1000)
+        tmp = min(maxepoc, 1000)
 
-        for _ in tqdm(range(0, tmp), leave=False):
-            #print("Generation: " + str(i))
+        t = int(popsize * pselection - 1)
+        t_plus_one = t + 1
+
+        for i in tqdm(range(0, tmp), leave=False):
+            # print("Generation: " + str(i))
 
             selected = self.__selection(df)
-            t = int(self.popsize * self.pselection - 1)
-            elite = selected[0:t + 1]
-            tmpcrossed = selected[t + 1:]
-            if random.rand() < self.pcrossover:
+
+            elite = selected[0:t_plus_one]
+            tmpcrossed = selected[t_plus_one:]
+            if random.rand() < pcrossover:
                 tmpcrossed = self.crossover(tmpcrossed)
             mutated = self.mutation(tmpcrossed)
 
             offspring = concatenate((elite, mutated))
-        
-            if self.n_core > 1:
-                fitness_and_metrics = None
-                pool = mp.Pool(self.n_core)
+
+            if ismultiprocessing:
+                pool = mp.Pool(n_core)
                 fitness_and_metrics = asarray(pool.map(fitness, offspring))
                 pool.close()
                 pool.join()
@@ -189,28 +229,36 @@ class GA:
 
             df = DataFrame(offspring)
             df[lastcol] = fitness_and_metrics[:, 0]
-            df[lastcol + 1] = fitness_and_metrics[:, 1]
-            df[lastcol + 2] = fitness_and_metrics[:, 2]
-            df[lastcol + 3] = fitness_and_metrics[:, 3]
+            df[lastcol_plus_one] = fitness_and_metrics[:, 1]
+            df[lastcol_plus_two] = fitness_and_metrics[:, 2]
+            df[lastcol_plus_three] = fitness_and_metrics[:, 3]
 
-        if self.maxepoc >= 1000:
+            new_best_Fx = max(df.loc[:, lastcol])
+            imp = (new_best_Fx - current_best_Fx) / current_best_Fx
+            # print("Fx % improvement: " + str(imp))
+            # self.improvements.append(imp)
+            if imp > 0.001:
+                last_improvement_gen = i
+                current_best_Fx = new_best_Fx
+            if i - last_improvement_gen > 200:
+                return df
+
+        if maxepoc >= 1000:
             self.pmutation = 0.5
-            for _ in tqdm(range(1000, self.maxepoc), leave=False):
-                #print("Generation: " + str(i))
+            for i in tqdm(range(1000, self.maxepoc), leave=False):
+                # print("Generation: " + str(i))
 
                 selected = self.__selection(df)
-                t = int(self.popsize * self.pselection - 1)
-                elite = selected[0:t + 1]
-                tmpcrossed = selected[t + 1:]
-                if random.rand() < self.pcrossover:
+                elite = selected[0:t_plus_one]
+                tmpcrossed = selected[t_plus_one:]
+                if random.rand() < pcrossover:
                     tmpcrossed = self.crossover(tmpcrossed)
                 mutated = self.mutation(tmpcrossed)
 
                 offspring = concatenate((elite, mutated))
 
-                if self.n_core > 1:
-                    fitness_and_metrics = None
-                    pool = mp.Pool(self.n_core)
+                if ismultiprocessing:
+                    pool = mp.Pool(n_core)
                     fitness_and_metrics = asarray(pool.map(fitness, offspring))
                     pool.close()
                     pool.join()
@@ -219,16 +267,28 @@ class GA:
 
                 df = DataFrame(offspring)
                 df[lastcol] = fitness_and_metrics[:, 0]
-                df[lastcol + 1] = fitness_and_metrics[:, 1]
-                df[lastcol + 2] = fitness_and_metrics[:, 2]
-                df[lastcol + 3] = fitness_and_metrics[:, 3]
+                df[lastcol_plus_one] = fitness_and_metrics[:, 1]
+                df[lastcol_plus_two] = fitness_and_metrics[:, 2]
+                df[lastcol_plus_three] = fitness_and_metrics[:, 3]
+
+                new_best_Fx = max(df.loc[:, lastcol])
+                imp = (new_best_Fx - current_best_Fx) / current_best_Fx
+                # print("Fx % improvement: " + str(imp))
+                # self.improvements.append(imp)
+                if imp > 0.001:
+                    last_improvement_gen = i
+                    current_best_Fx = new_best_Fx
+                if i - last_improvement_gen > 200:
+                    return df
+
         return df
 
 
-cache = manager.dict()
+cache = None
 globaln = 0
 globalm = 0
 globalsimulation = -1
+
 
 def fitness(chromosome):
     scheduling = chromosome_to_schedule(chromosome)
@@ -236,13 +296,15 @@ def fitness(chromosome):
     if key not in cache.keys():
         TT, TTC, BU = globalsimulation(task_number=globaln, scheduling=scheduling)
         maxtest = max([len(scheduling[i]) for i in range(globalm)])
-        totaltest = globaln
-        Fx = maxtest / TT + totaltest / TTC + BU
+        Fx = maxtest / TT + globaln / TTC + BU
         cache[key] = (Fx, TT, TTC, BU)
-        return (Fx, TT, TTC, BU)
+        return Fx, TT, TTC, BU
     return cache[key]
 
-    # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
+
+# chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
+
+
 def chromosome_to_schedule(chromosome):
     if isinstance(chromosome, ndarray):
         chromosome = chromosome.tolist()
@@ -250,12 +312,14 @@ def chromosome_to_schedule(chromosome):
     last = 0
     k = 0
     schedule = [0] * globalm
-    for i in range(len(chromosome)):
+    len_chromosome = len(chromosome)
+    globalm_minus_one = globalm - 1
+    for i in range(len_chromosome):
         if chromosome[i] in divisionpoints:
             schedule[k] = chromosome[last:i]
             k += 1
             last = i + 1
-        if k == globalm - 1:
+        if k == globalm_minus_one:
             break
     schedule[k] = chromosome[last:]
     return schedule
