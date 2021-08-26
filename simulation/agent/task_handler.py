@@ -7,11 +7,9 @@ class TaskHandler:
     def __init__(self, env, n):
         self.env = env
         self.n = n
-        self.scheduling = None
-        self.assigned_tasks = [-1 for _ in range(self.env.agent_number)]
+        self.scheduling = self.env.scheduling
+        self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
-        if self.env.scheduling is not None:
-            self.scheduling = self.env.scheduling
         self.pods = env.get_pods()
         self.task_pool = {}
         self.initial_task_pool = {}
@@ -21,7 +19,7 @@ class TaskHandler:
     def new_task_pool(self, n):
         self.n = n
         self.scheduling = "Random"
-        self.assigned_tasks = [-1 for _ in range(self.env.agent_number)]
+        self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         if self.env.scheduling is not None:
             self.scheduling = self.env.scheduling
@@ -33,7 +31,7 @@ class TaskHandler:
     def same_task_pool(self, n):
         self.n = n
         self.scheduling = "Random"
-        self.assigned_tasks = [-1 for _ in range(self.env.agent_number)]
+        self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         if self.env.scheduling is not None:
             self.scheduling = self.env.scheduling
@@ -69,8 +67,7 @@ class TaskHandler:
             new_task[1] = len(self.env.routes[id_robot][id_pod])
 
             for possible_task in indexes:
-                id_pod = str(
-                    self.env.raster_to_graph[self.task_pool[possible_task]])
+                id_pod = str(self.env.raster_to_graph[self.task_pool[possible_task]])
                 task_len = len(self.env.routes[id_robot][id_pod])
                 if task_len < new_task[1]:
                     new_task[0] = possible_task
