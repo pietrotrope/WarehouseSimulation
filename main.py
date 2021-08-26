@@ -1,9 +1,4 @@
-from multiprocessing import freeze_support
 from random import seed
-
-import numpy as np
-from tqdm import tqdm, trange
-
 from simulation.tools import *
 from simulation.environment import Environment
 from time import time
@@ -15,7 +10,7 @@ import json
 def main():
     disable()    
     seed(666)
-    task_number = 50
+    task_number = 400
 
     routes = {}
     with open('astar/astarRoutes.json', 'r') as f:

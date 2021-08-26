@@ -69,7 +69,7 @@ class TaskHandler:
         if self.task_pool:
             indexes = list(self.task_pool.keys())
             new_task = [indexes[0], -1]
-            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id].position])
+            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id]["position"]])
             id_pod = str(self.env.raster_to_graph[self.task_pool[indexes[0]]])
             new_task[1] = len(self.env.routes[id_robot][id_pod])
 
@@ -94,7 +94,7 @@ class TaskHandler:
         if self.task_pool:
             indexes = list(self.task_pool.keys())
             new_task = [-1, maxsize]
-            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id].position])
+            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id]["position"]])
 
             other_robot_id = -1
             ver = False
@@ -125,9 +125,9 @@ class TaskHandler:
                 self.assigned_tasks[robot_id] = new_task[0]
 
                 if ver and other_robot_id != -1:
-                    self.env.agents[other_robot_id].task = None
+                    self.env.agents[other_robot_id]["task"] = None
                     self.assigned_tasks[other_robot_id] = -1
-                    self.env.agents[other_robot_id].get_task()
+                    self.env.get_task(self.env.agents[other_robot_id])
                     
                 selected_task = self.task_pool[new_task[0]]
                 return selected_task

@@ -2,9 +2,7 @@ import sys
 from collections import defaultdict
 import csv
 import json
-
 from itertools import count
-from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
 from simulation.tile import Tile
 
@@ -42,8 +40,22 @@ class Environment:
             self.task_handler = task_hanlder
         
         for i in range(self.agent_number):
-            agent = Agent(i, agents_positions[i], self, task_handler=self.task_handler)
-            self.agents.append(agent)
+            self.agents.append({
+                "id" : i,
+                "position" : agents_positions[i],
+                "home" : agents_positions[i],
+                "route" : [],
+                "task" : None,
+                "log" : [agents_positions[i]],
+                "swap_phase" : [0, i]
+            })
+
+
+
+
+
+
+
 
         if routes is None:
             with open('astar/astarRoutes.json', 'r') as f:
@@ -63,10 +75,10 @@ class Environment:
             self.task_handler.same_task_pool(task_number)
         self.save = save
         for agent in self.agents:
-            agent.position = agent.home
-            agent.time = 0
-            agent.log.clear()
-            agent.log.append(agent.position)
+            agent["position"] = agent["home"]
+            agent["time"] = 0
+            agent["log"].clear()
+            agent["log"].append(agent["position"])
         
 
         for x in range(self.map_shape[0]):
@@ -76,98 +88,179 @@ class Environment:
         if run:
             return self.run()
 
-    def make_step(self, to_time, pos=0):
+    def make_step(self, task_ending_times):
         moves = self.moves
-        for i in range(pos, to_time):
+        agents_list = self.agents
+        i=0
+        while i < (min(task_ending_times) - self.time):
             moves.clear()
-            for agent in self.agents:
-                if agent.task:
-                    agent_id = agent.id
-                    collision = agent.detect_collision(i)
+            collision_detected = False
+            for agent in agents_list:
+                if agent["task"] and not collision_detected:
+                    collision = None
+
+                    x, y = agent["route"][i]
+                    agent_id = agent["id"]
+                    i_plus_env_time, i_minus_one, x_y_times = i + self.time, i-1, self.timestamp[x][y]
+                    agents, new_agents, route_i_minus_one, ver2 = x_y_times[i_plus_env_time], x_y_times[i_plus_env_time + 1], agent["route"][i_minus_one], agent["swap_phase"][0] <= 0
+                    ver, ver3 = new_agents and new_agents[0] != agent_id, agents and agents[0] != agent_id and ver2
+                    
+                    if ver3:
+                        other_agent = agents_list[agents[0]]
+                        agent2_route_greater_i = len(other_agent["route"]) > i
+                        
+                        if  agent2_route_greater_i:
+                            i_greater_0 = i>0
+                            other_agent_route_i = other_agent["route"][i] 
+                            if i_greater_0:
+                                if other_agent_route_i == route_i_minus_one:
+                                    collision = 0, i, agent_id, agents[0]
+                                elif other_agent_route_i == other_agent["route"][i_minus_one] or other_agent["swap_phase"][0]:
+                                    collision = 1, i, agent_id, -1
+                                else:
+                                    if ver:
+                                        collision = 1, i, agent_id, -1
+                            else:
+                                if other_agent_route_i == agent["position"]:
+                                    collision = 0, i, agent_id, agents[0]
+                                elif other_agent_route_i == other_agent["position"] or other_agent["swap_phase"][0]:
+                                    collision = 1, i, agent_id, -1
+                                else:
+                                    if ver:
+                                        collision = 1, i, agent_id, -1
+                        else:
+                            collision = 1, i, agent_id, -1
+                    else:
+                        if ver:
+                            if ver2:
+                                collision = 1, i, agent_id, -1
+                            else:
+                                collision = 1, i, new_agents[0], -1
+
+
                     if collision:
                         for ver, x1, y1, t, ag, otag in moves:
                             self.timestamp[x1][y1][t].clear()
                             if ver:
-                                ag.swap_phase[0] += 1
-                                ag.swap_phase[1] = otag
-                        return collision
-                    else:
-                        x, y = agent.route[i]
-                        i_plus_time_plus_one = i + self.time + 1
-                        self.timestamp[x][y][i_plus_time_plus_one].append(agent_id)
+                                ag["swap_phase"][0] += 1
+                                ag["swap_phase"][1] = otag
 
-                        if agent.swap_phase[0]:
-                            agent.swap_phase[0] -= 1
-                            moves.append((True, x, y, i_plus_time_plus_one, agent, agent.swap_phase[1]))
-                            if not agent.swap_phase[0]:
-                                agent.swap_phase[1] = agent_id
+                        collision_type, time, agent, other_agent = collision
+                        agent1 = agents_list[agent]
+                        time_minus_one = time - 1
+                        agent1["route"].insert(time, agent1["route"][time_minus_one]) if time else agent1["route"].insert(0, agent1["position"])
+                        if not collision_type:
+                            agent2 = agents_list[other_agent]
+                            agent1["swap_phase"] = [2, agent2["id"]]
+                            agent2["route"].insert(time, agent2["route"][time_minus_one]) if time else agent2["route"].insert(0, agent2["position"])
+                            agent2["swap_phase"] = [2, agent1["id"]]
+                    
+                        if collision[3] != -1:
+                            task_ending_times[collision[3]] = self.time + len(agents_list[collision[3]]["route"])
+                        task_ending_times[collision[2]] = self.time + len(agents_list[collision[2]]["route"])
+                       
+                        collision_detected = True
+                    else:
+
+                        x, y = agent["route"][i]
+                        i_plus_time_plus_one = i + self.time + 1
+                        x_y_times[i_plus_time_plus_one].append(agent_id)
+
+                        if agent["swap_phase"][0]:
+                            agent["swap_phase"][0] -= 1
+                            moves.append((True, x, y, i_plus_time_plus_one, agent, agent["swap_phase"][1]))
+                            if not agent["swap_phase"][0]:
+                                agent["swap_phase"][1] = agent_id
                         else:
                             moves.append((False, x, y, i_plus_time_plus_one,-1, -1))
+            if not collision_detected:
+                i+=1
 
-        return None
 
     def run(self):
         task_ending_times = self.task_ending_times
         done = self.done
         agents = self.agents
+        graph_to_raster = self.graph_to_raster
+        raster_to_graph = self.raster_to_graph
         for i in range(self.agent_number):
             task_ending_times[i] = sys.maxsize
             done[i] = False
 
         for _ in count(0):
             # Assign tasks
+            curtime = self.time
             ver = False
             for agent in agents:
-                if not agent.route:
-                    done[agent.id] = agent.get_task()
-                    if done[agent.id]:
-                        agent.position = agent.home
-                        task_ending_times[agent.id] = sys.maxsize
-                        agent.task = None
+                if not agent["route"]:
+                    task = self.task_handler.get_task(agent["id"])
+                    if task is None:
+                        done[agent["id"]] = True
+                    else:
+                        agent["task"]= task
+                        id_robot = str(raster_to_graph[agent["position"]])
+                        id_pod = str(raster_to_graph[task])
+                        route_to_pod = self.routes[id_robot][id_pod]
+                        if not route_to_pod:
+                            route_to_pod = [raster_to_graph[agent["position"]]]
+                        route = route_to_pod
+                        route_to_ps = self.routes[id_pod].copy()
+                        if route_to_pod[-1] != route_to_ps[0]:
+                            start = graph_to_raster[route_to_ps[0]][0]
+                            end = graph_to_raster[route_to_pod[-1]][0]
+                            movement = tuple(map(lambda i, j: i - j, start, end))
+                            if self.raster_map[tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
+                                route_to_ps.insert(0,
+                                                raster_to_graph[tuple(map(lambda i, j: i + j, end, (0, movement[1])))])
+                            else:
+                                route_to_ps.insert(0,
+                                                raster_to_graph[tuple(map(lambda i, j: i + j, end, (movement[0], 0)))])
+                            route_to_ps.insert(0, route_to_pod[-1])
+                        route = [*route, *route_to_ps.copy()]
+                        route_to_ps.reverse()
+                        route = [*route, *route_to_ps]
+                        agent["route"] = [graph_to_raster[cell][0] for cell in route]
+
+                    if done[agent["id"]]:
+                        agent["position"] = agent["home"]
+                        task_ending_times[agent["id"]] = sys.maxsize
+                        agent["task"] = None
                     else:
                         ver = True
 
-            if done.count(True) == len(done):
-                if self.save:
-                    self.save_data()  
-                res = [len(agent.log) for agent in agents]
-                TTC = sum(res)
-                BU, TT = min(res) / max(res), max(res)
-                return TT, TTC, BU
-
             if ver:
                 for update_agent in agents:
-                    if not done[update_agent.id]:
-                        task_ending_times[update_agent.id] = self.time + len(update_agent.route)
+                    if not done[update_agent["id"]]:
+                        task_ending_times[update_agent["id"]] = curtime + len(update_agent["route"])
+            else:
+                if done.count(True) == len(done):
+                    if self.save:
+                        self.save_data()  
+                    res = [len(agent["log"]) for agent in agents]
+                    TTC = sum(res)
+                    BU, TT = min(res) / max(res), max(res)
+                    return TT, TTC, BU
 
-            collision = self.make_step(min(task_ending_times) - self.time)
-            while collision:
-                
-                collision_type, time, agent, other_agent = collision
-                agent1 = agents[agent]
-                agent1.shift_route(time)
-                if not collision_type:
-                    agent2 = agents[other_agent]
-                    agent1.swap_phase = [2, agent2.id]
-                    agent2.shift_route(time)
-                    agent2.swap_phase = [2, agent1.id]
-                    
-                if collision[3] != -1:
-                    task_ending_times[collision[3]] = self.time + len(agents[collision[3]].route)
-                task_ending_times[collision[2]] = self.time + len(agents[collision[2]].route)
-                collision = self.make_step(min(task_ending_times) - self.time, collision[1])
+            self.make_step(task_ending_times)
 
             new_time = min(task_ending_times)
-            delta = new_time - self.time
+            delta = new_time - curtime
             for agent in agents:
-                agent.skip_to(delta)
+                route = agent["route"]
+                if len(route) >= delta:
+                    agent["log"] = [*(agent["log"]), *(agent["route"][0:delta])]
+                    agent["position"] = route[delta - 1]
+                    del route[:delta]
+                else:
+                    agent["position"] = agent["home"]
+                    agent["log"].append(agent["position"])
             self.time = new_time
 
 
     def save_data(self):
         res = []
         for agent in self.agents:
-            res.append(agent.log)
+            res.append(agent["log"])
         with open(self.simulation_name + "_out.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(res)
@@ -187,3 +280,36 @@ class Environment:
             f.write("\nBalancing Utilization:\n")
             f.write(str(bu))
 
+
+    def get_task(self, agent):
+            task = self.task_handler.get_task(agent["id"])
+            if task is None:
+                return True
+            else:
+                agent["task"] = task
+                graph_to_raster = self.graph_to_raster
+                raster_to_graph = self.raster_to_graph
+                id_robot = str(raster_to_graph[agent["position"]])
+                id_pod = str(raster_to_graph[task])
+                route_to_pod = self.routes[id_robot][id_pod]
+                if not route_to_pod:
+                    route_to_pod = [raster_to_graph[agent["position"]]]
+                route = route_to_pod
+
+                route_to_ps = self.routes[id_pod].copy()
+                if route_to_pod[-1] != route_to_ps[0]:
+                    start = graph_to_raster[route_to_ps[0]][0]
+                    end = graph_to_raster[route_to_pod[-1]][0]
+                    movement = tuple(map(lambda i, j: i - j, start, end))
+                    if self.raster_map[tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
+                        route_to_ps.insert(0,
+                                        raster_to_graph[tuple(map(lambda i, j: i + j, end, (0, movement[1])))])
+                    else:
+                        route_to_ps.insert(0,
+                                        raster_to_graph[tuple(map(lambda i, j: i + j, end, (movement[0], 0)))])
+                    route_to_ps.insert(0, route_to_pod[-1])
+                route = [*route, *route_to_ps.copy()]
+                route_to_ps.reverse()
+                route = [*route, *route_to_ps]
+                agent["route"] = [graph_to_raster[cell][0] for cell in route]
+                return False            
