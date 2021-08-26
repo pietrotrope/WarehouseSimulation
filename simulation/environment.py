@@ -1,8 +1,5 @@
 import sys
 from collections import defaultdict
-
-from pandas import read_csv
-import numpy as np
 import csv
 import json
 
@@ -10,47 +7,49 @@ from itertools import count
 from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
 from simulation.tile import Tile
-from simulation.graph.graph import Graph
 
 
 class Environment:
 
-    def __init__(self, map_path=None, cfg_path='../config.yaml', task_number=100, agent_number=8, scheduling="Random",
-                 save=False, run=True, simulation_name=""):
+    def __init__(self, task_number=100, agent_number=8, scheduling="Random",
+                 save=False, simulation_name="", routes = None, raster_map = None,
+                 graph = None, raster_to_graph = {}, graph_to_raster = {}, agents_positions = [], task_hanlder = None):
         self.simulation_name = simulation_name
         self.scheduling = scheduling
-        self.raster_map = None
-        self.timestamp = None
-        self.map_shape = ()
-        self.graph = None
-        self.agents = {}
         self.agent_number = agent_number
-        self.raster_to_graph = {}
-        self.graph_to_raster = {}
-        self.__load_map(map_path)
-        self.__gen_graph()
-        self.__gen_graph_map()
-        self.pods = self._get_pods()
-        self.task_handler = TaskHandler(self, task_number)
-        self.__spawn_agents(cfg_path)
-        self.time = 0
-        self.task_pool = {}
-        self.task_number = task_number
         self.save = save
-        self.moves = []
-        self.task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
-        self.done = [False for _ in range(self.agent_number)]
+        self.raster_map = raster_map
+        self.map_shape = self.raster_map.shape
+        self.graph = graph
+        self.timestamp = [[defaultdict(list) for _ in row] for row in self.raster_map]
+        self.raster_to_graph = raster_to_graph
+        self.graph_to_raster = graph_to_raster
+        self.agents = []
+        self.moves = []    
+        self.time = 0
+        self.task_ending_times = [sys.maxsize]*agent_number
+        self.done = [False]*agent_number    
+        self.pods = []
 
-        if self.graph is None or self.raster_map is None:
-            raise Exception("Error while Initializing environment")
+        for i, line in enumerate(self.raster_map):
+            for j, cell in enumerate(line):
+                if cell == Tile.POD.value:
+                    self.pods.append((i, j))
 
-        with open('astar/astarRoutes.json', 'r') as f:
-            self.routes = json.load(f)
-        if run:
-            self.run()
+        if task_hanlder is None:
+            self.task_handler = TaskHandler(self, task_number)
+        else:
+            self.task_handler = task_hanlder
+        
+        for i in range(self.agent_number):
+            agent = Agent(i, agents_positions[i], self, task_handler=self.task_handler)
+            self.agents.append(agent)
 
-    def ga_entrypoint(self, task_number, scheduling):
-        return self.new_simulation(task_number, run=True, save=False, scheduling=scheduling)
+        if routes is None:
+            with open('astar/astarRoutes.json', 'r') as f:
+                self.routes = json.load(f)
+        else:
+            self.routes = routes
 
     def new_simulation(self, task_number=100, run=True, save=False, scheduling="Random", new_task_pool=False,
                        simulation_name=None):
@@ -58,7 +57,6 @@ class Environment:
             self.simulation_name = simulation_name
         self.time = 0
         self.scheduling = scheduling
-        self.task_number = task_number
         if new_task_pool:
             self.task_handler.new_task_pool(task_number)
         else:
@@ -69,127 +67,14 @@ class Environment:
             agent.time = 0
             agent.log.clear()
             agent.log.append(agent.position)
+        
 
         for x in range(self.map_shape[0]):
             for y in range(self.map_shape[1]):
                 self.timestamp[x][y].clear()
+
         if run:
             return self.run()
-
-    def key_to_raster(self, key):
-        return self.graph.nodes[key].coord
-
-    def __get_picking_stations_number(self):
-        picking_stations_columns = np.count_nonzero(
-            self.raster_map == 4, axis=0)
-        picking_stations_columns = " {} ".format(
-            " ".join(map(str, picking_stations_columns)))
-        picking_stations_columns = [
-            [int(y) for y in x.split()] for x in picking_stations_columns.split('0')]
-        picking_stations_columns = [
-            x for x in picking_stations_columns if x != []]
-        return len(picking_stations_columns)
-
-    def _get_pods(self):
-        pods = []
-        for i, line in enumerate(self.raster_map):
-            for j, cell in enumerate(line):
-                if cell == Tile.POD.value:
-                    pods.append((i, j))
-        return pods
-
-    def get_pods(self):
-        return self.pods
-
-    def update_map(self, coord=None, key=None, tile=Tile.WALKABLE):
-        if coord is not None:
-            node = self.graph[self.raster_to_graph[coord]]
-            node.type = tile
-            self.raster_map[coord[0]][coord[1]] = tile.value
-        if key is not None:
-            node = self.graph[key]
-            node.type = tile
-            x, y = self.key_to_raster(key)[0]
-            self.raster_map[x][y] = tile.value
-
-    def __load_map(self, map_path):
-        map_path = 'map.csv' if map_path is None else map_path
-        self.raster_map = np.array(read_csv(map_path, header=None))
-        self.map_shape = self.raster_map.shape
-        self.__gen_tile_map()
-
-    def __gen_graph(self):
-        picking_station_number = self.__get_picking_stations_number()
-
-        graph_nodes = self.map_shape[0] * self.map_shape[1] - \
-                      (np.count_nonzero(self.raster_map == 4) - picking_station_number)
-        self.graph = Graph(graph_nodes)
-
-        picking_stations = [[] for _ in range(picking_station_number)]
-        upper_station = [(0, 0) for _ in range(picking_station_number)]
-        count = -1
-        agent_count = 0
-
-        for i in range(self.map_shape[0]):
-            current_picking_station = -1
-            for j in range(self.map_shape[1]):
-                if self.raster_map[i][j] == 4:
-                    if self.raster_map[i - 1][j] == self.raster_map[i][j - 1] == 0:
-                        current_picking_station += 1
-                        count += 1
-                        upper_station[current_picking_station] = (i, j)
-                        node = self.graph.get_node(count)
-                        node.coord = [(i, j)]
-                        node.type = Tile(self.raster_map[i][j])
-                        picking_stations[current_picking_station].append(
-                            (i, j))
-                        self.raster_to_graph[(i, j)] = count
-                    elif self.raster_map[i][j - 1] == 0:
-                        current_picking_station += 1
-                    self.raster_to_graph[(
-                        i, j)] = self.raster_to_graph[upper_station[current_picking_station]]
-                    picking_stations[current_picking_station].append((i, j))
-                else:
-                    if self.raster_map[i][j] == 1:
-                        self.agents[agent_count] = (i, j)
-                        agent_count += 1
-                    count += 1
-                    node = self.graph.get_node(count)
-                    node.coord = [(i, j)]
-                    node.type = Tile(self.raster_map[i][j])
-                    self.raster_to_graph[(i, j)] = count
-
-                node = self.raster_to_graph[(i, j)]
-                if j:
-                    self.graph.add_edge(node, self.raster_to_graph[(i, j - 1)])
-                if i:
-                    self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
-
-        for picking_station in picking_stations:
-            node = self.graph.get_node(
-                self.raster_to_graph[picking_station[0]])
-            node.coord = picking_station
-
-    def __gen_graph_map(self):
-        for node in self.graph.nodes:
-            self.graph_to_raster[node.id] = self.key_to_raster(node.id)
-
-    def __gen_tile_map(self):
-        self.timestamp = [[defaultdict(list) for _ in row] for row in self.raster_map]
-        # self.tile_map = [[Cell(Tile(cell)) for cell in row] for row in self.raster_map]
-
-    def __spawn_agents(self, cfg_path):
-        positions = self.agents
-        self.agents = []
-
-        for i in range(len(positions)):
-            agent = Agent(i, positions[i], self,
-                          task_handler=self.task_handler)
-
-            self.agents.append(agent)
-
-    def task_ending_time(self, agent):
-        return self.time + len(agent.route)
 
     def make_step(self, to_time, pos=0):
         moves = self.moves
@@ -222,56 +107,62 @@ class Environment:
         return None
 
     def run(self):
+        task_ending_times = self.task_ending_times
+        done = self.done
+        agents = self.agents
         for i in range(self.agent_number):
-            self.task_ending_times[i] = sys.maxsize
-            self.done[i] = False
+            task_ending_times[i] = sys.maxsize
+            done[i] = False
 
         for _ in count(0):
             # Assign tasks
             ver = False
-            for agent in self.agents:
+            for agent in agents:
                 if not agent.route:
-                    self.done[agent.id] = agent.get_task()
-                    if self.done[agent.id]:
+                    done[agent.id] = agent.get_task()
+                    if done[agent.id]:
                         agent.position = agent.home
-                        self.task_ending_times[agent.id] = sys.maxsize
+                        task_ending_times[agent.id] = sys.maxsize
                         agent.task = None
                     else:
                         ver = True
 
-            if self.simulation_ended(self.done):
+            if done.count(True) == len(done):
                 if self.save:
-                    self.save_data()
-                return self.compute_metrics()
+                    self.save_data()  
+                res = [len(agent.log) for agent in agents]
+                TTC = sum(res)
+                BU, TT = min(res) / max(res), max(res)
+                return TT, TTC, BU
 
             if ver:
-                for update_agent in self.agents:
-                    if not self.done[update_agent.id]:
-                        self.task_ending_times[update_agent.id] = self.task_ending_time(update_agent)
+                for update_agent in agents:
+                    if not done[update_agent.id]:
+                        task_ending_times[update_agent.id] = self.time + len(update_agent.route)
 
-            collision = self.make_step(min(self.task_ending_times) - self.time)
+            collision = self.make_step(min(task_ending_times) - self.time)
             while collision:
-                self.avoid_collision(collision)
+                
+                collision_type, time, agent, other_agent = collision
+                agent1 = agents[agent]
+                agent1.shift_route(time)
+                if not collision_type:
+                    agent2 = agents[other_agent]
+                    agent1.swap_phase = [2, agent2.id]
+                    agent2.shift_route(time)
+                    agent2.swap_phase = [2, agent1.id]
+                    
                 if collision[3] != -1:
-                    self.task_ending_times[collision[3]] = self.task_ending_time(self.agents[collision[3]])
-                self.task_ending_times[collision[2]] = self.task_ending_time(self.agents[collision[2]])
-                collision = self.make_step(min(self.task_ending_times) - self.time, collision[1])
-            self.update_simulation_time(min(self.task_ending_times))
+                    task_ending_times[collision[3]] = self.time + len(agents[collision[3]].route)
+                task_ending_times[collision[2]] = self.time + len(agents[collision[2]].route)
+                collision = self.make_step(min(task_ending_times) - self.time, collision[1])
 
-    def simulation_ended(self, done):
-        return done.count(True) == len(done)
+            new_time = min(task_ending_times)
+            delta = new_time - self.time
+            for agent in agents:
+                agent.skip_to(delta)
+            self.time = new_time
 
-    def update_simulation_time(self, new_time):
-        delta = new_time - self.time
-        for agent in self.agents:
-            agent.skip_to(delta)
-        self.time = new_time
-
-    def compute_metrics(self):
-        res = [len(agent.log) for agent in self.agents]
-        TTC = sum(res)
-        BU, TT = min(res) / max(res), max(res)
-        return TT, TTC, BU
 
     def save_data(self):
         res = []
@@ -296,12 +187,3 @@ class Environment:
             f.write("\nBalancing Utilization:\n")
             f.write(str(bu))
 
-    def avoid_collision(self, collision):
-        collision_type, time, agent, other_agent = collision
-        agent1 = self.agents[agent]
-        agent1.shift_route(time)
-        if not collision_type:
-            agent2 = self.agents[other_agent]
-            agent1.swap_phase = [2, agent2.id]
-            agent2.shift_route(time)
-            agent2.swap_phase = [2, agent1.id]

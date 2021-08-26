@@ -3,9 +3,6 @@ from random import choice
 from collections import deque
 import copy
 
-import schedule as schedule
-
-
 class TaskHandler:
     def __init__(self, env, n):
         self.env = env
@@ -16,7 +13,7 @@ class TaskHandler:
 
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
-        self.pods = env.get_pods()
+        self.pods = env.pods
         self.task_pool = {}
         self.initial_task_pool = {}
         for i in range(n):

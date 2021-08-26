@@ -4,21 +4,35 @@ from random import seed
 import numpy as np
 from tqdm import tqdm, trange
 
+from simulation.tools import *
 from simulation.environment import Environment
 from time import time
 from ga import GA
 from gc import disable, enable
+import json
 
 
 def main():
     disable()    
     seed(666)
     task_number = 50
-    e = Environment(map_path='rendering/map.csv', save=False, run=False, task_number=task_number, scheduling="Greedy0",
-                    simulation_name="test")
+
+    routes = {}
+    with open('astar/astarRoutes.json', 'r') as f:
+        routes = json.load(f)
+
+    raster_map = get_raster_map('rendering/map.csv')
+    graph, raster_to_graph, agents_positions = gen_graph(raster_map)
+    graph_to_raster = gen_graph_to_raster(graph)
+
+    e = Environment(task_number=task_number, scheduling="Greedy0",
+                    simulation_name="test", raster_map = raster_map, graph=graph, raster_to_graph=raster_to_graph,
+                    agents_positions=agents_positions, graph_to_raster=graph_to_raster, routes=routes)
+    
+                    
     e.task_handler.new_task_pool(task_number)
     t = time()
-    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=200, n=task_number, m=8, n_core=1)
+    ga = GA(0, e.new_simulation, popsize=100, maxepoc=10, n=task_number, m=8)
     last_population = ga.run()
     elapsed = time() - t
     enable()
