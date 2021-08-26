@@ -9,7 +9,6 @@ import json
 from itertools import count
 from simulation.agent.agent import Agent
 from simulation.agent.task_handler import TaskHandler
-from simulation.cell import Cell
 from simulation.tile import Tile
 from simulation.graph.graph import Graph
 
@@ -38,7 +37,7 @@ class Environment:
         self.task_pool = {}
         self.task_number = task_number
         self.save = save
-        self.moves, self.swap_phases = {}, []
+        self.moves = []
         self.task_ending_times = [sys.maxsize for _ in range(self.agent_number)]
         self.done = [False for _ in range(self.agent_number)]
 
@@ -55,7 +54,7 @@ class Environment:
 
     def new_simulation(self, task_number=100, run=True, save=False, scheduling="Random", new_task_pool=False,
                        simulation_name=None):
-        if simulation_name != None:
+        if simulation_name is not None:
             self.simulation_name = simulation_name
         self.time = 0
         self.scheduling = scheduling
@@ -64,14 +63,13 @@ class Environment:
             self.task_handler.new_task_pool(task_number)
         else:
             self.task_handler.same_task_pool(task_number)
-
         self.save = save
         for agent in self.agents:
             agent.position = agent.home
-            agent.task = None
-            agent.route = []
             agent.time = 0
-            agent.log = [agent.position]
+            agent.log.clear()
+            agent.log.append(agent.position)
+
         for x in range(self.map_shape[0]):
             for y in range(self.map_shape[1]):
                 self.timestamp[x][y].clear()
@@ -162,9 +160,9 @@ class Environment:
                     self.raster_to_graph[(i, j)] = count
 
                 node = self.raster_to_graph[(i, j)]
-                if j != 0:
+                if j:
                     self.graph.add_edge(node, self.raster_to_graph[(i, j - 1)])
-                if i != 0:
+                if i:
                     self.graph.add_edge(node, self.raster_to_graph[(i - 1, j)])
 
         for picking_station in picking_stations:
@@ -194,30 +192,33 @@ class Environment:
         return self.time + len(agent.route)
 
     def make_step(self, to_time, pos=0):
+        moves = self.moves
         for i in range(pos, to_time):
-            self.moves.clear()
-            self.swap_phases.clear()
+            moves.clear()
             for agent in self.agents:
                 if agent.task:
+                    agent_id = agent.id
                     collision = agent.detect_collision(i)
                     if collision:
-                        for ag_id, value in self.moves.items():
-                            self.timestamp[value[0]][value[1]][value[2]].remove(ag_id)
-                        for ag in self.swap_phases:
-                            ag[0].swap_phase[0] += 1
-                            ag[0].swap_phase[1] = ag[1]
+                        for ver, x1, y1, t, ag, otag in moves:
+                            self.timestamp[x1][y1][t].clear()
+                            if ver:
+                                ag.swap_phase[0] += 1
+                                ag.swap_phase[1] = otag
                         return collision
                     else:
-                        if agent.swap_phase[0] > 0:
-                            agent.swap_phase[0] -= 1
-                            self.swap_phases.append((agent, agent.swap_phase[1]))
-                            if agent.swap_phase[0] == 0:
-                                agent.swap_phase[1] = agent.id
+                        x, y = agent.route[i]
+                        i_plus_time_plus_one = i + self.time + 1
+                        self.timestamp[x][y][i_plus_time_plus_one].append(agent_id)
 
-                    x, y = agent.route[i]
-                    i_plus_time_plus_one = i + self.time + 1
-                    self.timestamp[x][y][i_plus_time_plus_one].append(agent.id)
-                    self.moves[agent.id] = (x, y, i_plus_time_plus_one)
+                        if agent.swap_phase[0]:
+                            agent.swap_phase[0] -= 1
+                            moves.append((True, x, y, i_plus_time_plus_one, agent, agent.swap_phase[1]))
+                            if not agent.swap_phase[0]:
+                                agent.swap_phase[1] = agent_id
+                        else:
+                            moves.append((False, x, y, i_plus_time_plus_one,-1, -1))
+
         return None
 
     def run(self):
@@ -251,22 +252,19 @@ class Environment:
             collision = self.make_step(min(self.task_ending_times) - self.time)
             while collision:
                 self.avoid_collision(collision)
-
                 if collision[3] != -1:
                     self.task_ending_times[collision[3]] = self.task_ending_time(self.agents[collision[3]])
-
                 self.task_ending_times[collision[2]] = self.task_ending_time(self.agents[collision[2]])
-
                 collision = self.make_step(min(self.task_ending_times) - self.time, collision[1])
-
             self.update_simulation_time(min(self.task_ending_times))
 
     def simulation_ended(self, done):
         return done.count(True) == len(done)
 
     def update_simulation_time(self, new_time):
+        delta = new_time - self.time
         for agent in self.agents:
-            agent.skip_to(new_time - self.time)
+            agent.skip_to(delta)
         self.time = new_time
 
     def compute_metrics(self):
@@ -302,7 +300,7 @@ class Environment:
         collision_type, time, agent, other_agent = collision
         agent1 = self.agents[agent]
         agent1.shift_route(time)
-        if collision_type == 0:
+        if not collision_type:
             agent2 = self.agents[other_agent]
             agent1.swap_phase = [2, agent2.id]
             agent2.shift_route(time)

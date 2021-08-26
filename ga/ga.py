@@ -25,7 +25,7 @@ class GA:
     # m: bot number
     def __init__(self, seed, simulation, popsize=100, maxepoc=100000, pcrossover=0.95, pmutation=0.1, pselection=0.2,
                  n=50, m=8, n_core= 1):
-        self.cache = manager.dict()
+        self.cache = {}
         self.popsize = popsize
         self.maxepoc = maxepoc
         self.pcrossover = pcrossover
@@ -149,11 +149,9 @@ class GA:
 
         if self.n_core > 1:
             pool = mp.Pool(self.n_core)
-            fitness_and_metrics = pool.map(fitness, self.initialPopulation)
+            fitness_and_metrics = asarray(pool.map(fitness, self.initialPopulation))
             pool.close()
             pool.join()
-        
-            fitness_and_metrics = asarray(fitness_and_metrics)
         else:
             fitness_and_metrics = asarray(list(map(self.__fitness, self.initialPopulation)))
 
@@ -167,7 +165,7 @@ class GA:
 
         tmp = min(self.maxepoc, 1000)
 
-        for i in tqdm(range(0, tmp), leave=False):
+        for _ in tqdm(range(0, tmp), leave=False):
             #print("Generation: " + str(i))
 
             selected = self.__selection(df)
@@ -183,11 +181,9 @@ class GA:
             if self.n_core > 1:
                 fitness_and_metrics = None
                 pool = mp.Pool(self.n_core)
-                fitness_and_metrics = pool.map(fitness, offspring)
+                fitness_and_metrics = asarray(pool.map(fitness, offspring))
                 pool.close()
                 pool.join()
-            
-                fitness_and_metrics = asarray(fitness_and_metrics)
             else:
                 fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
 
@@ -199,7 +195,7 @@ class GA:
 
         if self.maxepoc >= 1000:
             self.pmutation = 0.5
-            for i in tqdm(range(1000, self.maxepoc), leave=False):
+            for _ in tqdm(range(1000, self.maxepoc), leave=False):
                 #print("Generation: " + str(i))
 
                 selected = self.__selection(df)
@@ -215,11 +211,9 @@ class GA:
                 if self.n_core > 1:
                     fitness_and_metrics = None
                     pool = mp.Pool(self.n_core)
-                    fitness_and_metrics = pool.map(fitness, offspring)
+                    fitness_and_metrics = asarray(pool.map(fitness, offspring))
                     pool.close()
                     pool.join()
-                
-                    fitness_and_metrics = asarray(fitness_and_metrics)
                 else:
                     fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
 

@@ -9,6 +9,7 @@ from time import time
 from ga import GA
 from gc import disable, enable
 
+
 def main():
     disable()    
     seed(666)
@@ -17,12 +18,12 @@ def main():
                     simulation_name="test")
     e.task_handler.new_task_pool(task_number)
     t = time()
-    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=10, n=task_number, m=8, n_core=1)
+    ga = GA(0, e.ga_entrypoint, popsize=100, maxepoc=200, n=task_number, m=8, n_core=1)
     last_population = ga.run()
     elapsed = time() - t
     enable()
     #print(last_population)
-    # print("Elapsed " + str(elapsed))
+    print("Elapsed " + str(elapsed))
 
     Fx_col = len(last_population.columns) - 4
     Fx = last_population.loc[:, Fx_col]
@@ -43,8 +44,4 @@ def main():
 
 
 if __name__ == '__main__':
-    times = np.zeros(100)
-    for i in trange(100):
-        times[i] = main()
-
-    print('avg: {}, std: {}'.format(np.average(times), np.std(times)))
+    main()

@@ -40,7 +40,7 @@ class TaskHandler:
         self.task_pool = copy.deepcopy(self.initial_task_pool)
 
     def get_task(self, robot_id):
-        if type(self.scheduling) != str:
+        if len(self.scheduling) == 8:
             if self.scheduling[robot_id]:
                 return self.task_pool[self.scheduling[robot_id].pop(0)]
             else:
