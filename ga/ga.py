@@ -183,6 +183,7 @@ class GA:
 
         t = int(popsize * pselection - 1)
         t_plus_one = t + 1
+        current_best_Fx = -1
 
         for i in tqdm(range(0, tmp), leave=False):
             # print("Generation: " + str(i))
@@ -204,6 +205,8 @@ class GA:
             df[Fx_col_plus_one] = fitness_and_metrics[:, 1]
             df[Fx_col_plus_two] = fitness_and_metrics[:, 2]
             df[Fx_col_plus_three] = fitness_and_metrics[:, 3]
+
+        current_best_Fx = max(df.loc[:, Fx_col])
 
         if maxepoc >= 1000:
             self.pmutation = 0.5
