@@ -71,8 +71,8 @@ class Environment:
         if run:
             return self.run()
 
-    def make_step(self, task_ending_times):
-        moves, agents_list, active_agents  = self.moves, self.agents, self.active_agents
+    def make_step(self, task_ending_times, iterator):
+        moves, agents_list = self.moves, self.agents
         i, i_plus_env_time = 0, self.time
         i_plus_time_plus_one, i_minus_one = i_plus_env_time + 1, i - 1
         clear, insert, append, timestamp = list.clear, list.insert, list.append, self.timestamp
@@ -80,7 +80,7 @@ class Environment:
         while i_plus_env_time < min(task_ending_times):
             clear(moves)
             collision = None
-            for agent_id, agent in active_agents.items():
+            for agent_id, agent in iterator:
                 x, y = agent["route"][i]
                 x_y_times =timestamp[x][y]
                 agents, new_agents, route_i_minus_one, ver2 = x_y_times[i_plus_env_time], x_y_times[
@@ -115,8 +115,8 @@ class Environment:
                             collision = 1, new_agents[0], -1
 
                 if collision:
-                    for ver, x1, y1, t, ag, otag in moves:
-                        clear(timestamp[x1][y1][t])
+                    for ver, x1, y1, ag, otag in moves:
+                        clear(timestamp[x1][y1][i_plus_time_plus_one])
                         if ver:
                             ag["swap_phase"][0] += 1
                             ag["swap_phase"][1] = otag
@@ -125,25 +125,25 @@ class Environment:
                     agent1 = agents_list[agent]
                     agent1["route"].insert(i, agent1["route"][i_minus_one]) if i else agent1[
                         "route"].insert(0, agent1["position"])
-                    task_ending_times[agent] = self.time + len(agents_list[agent]["route"])
+                    task_ending_times[agent] = self.time + len(agent1["route"])
                     if not collision_type:
                         agent2 = agents_list[other_agent]
                         agent1["swap_phase"] = [2, agent2["id"]]
                         insert(agent2["route"], i, agent2["route"][i_minus_one]) if i else insert(
                             agent2["route"], 0, agent2["position"])
                         agent2["swap_phase"] = [2, agent1["id"]]
-                        task_ending_times[other_agent] = self.time + len(agents_list[other_agent]["route"])                          
+                        task_ending_times[other_agent] = self.time + len(agent2["route"])                          
 
                     break
                 else:
                     append(x_y_times[i_plus_time_plus_one], agent_id)
                     if agent["swap_phase"][0]:
                         agent["swap_phase"][0] -= 1
-                        append(moves, (True, x, y, i_plus_time_plus_one, agent, agent["swap_phase"][1]))
+                        append(moves, (True, x, y, agent, agent["swap_phase"][1]))
                         if not agent["swap_phase"][0]:
                             agent["swap_phase"][1] = agent_id
                     else:
-                        append(moves, (False, x, y, i_plus_time_plus_one, -1, -1))
+                        append(moves, (False, x, y, -1, -1))
             if not collision:
                 i_minus_one = i
                 i += 1
@@ -163,6 +163,7 @@ class Environment:
         extend = list.extend
         self.active_agents = {}
         active_agents = self.active_agents
+        iterator = active_agents.items()
         for i in agents:
             active_agents[i["id"]] = i
 
@@ -211,7 +212,7 @@ class Environment:
                         ver = True
 
             if ver:
-                for update_agent_id, update_agent in active_agents.items():
+                for update_agent_id, update_agent in iterator:
                     if not done[update_agent["id"]]:
                         task_ending_times[update_agent_id] = curtime + len(update_agent["route"])
             else:
@@ -223,11 +224,11 @@ class Environment:
                     BU, TT = min(res) / max(res), max(res)
                     return TT, TTC, BU
 
-            self.make_step(task_ending_times)
+            self.make_step(task_ending_times, iterator)
 
             new_time = min(task_ending_times)
             delta = new_time - curtime
-            for _ , agent in active_agents.items():
+            for _ , agent in iterator:
                 route = agent["route"]
                 if len(route) >= delta:
                     agent["log"] = [*(agent["log"]), *(agent["route"][0:delta])]
