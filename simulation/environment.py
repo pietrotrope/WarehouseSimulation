@@ -167,14 +167,16 @@ class Environment:
                 i += 1
 
     def run(self):
-        task_ending_times = self.task_ending_times
-        done = self.done
         agents = self.agents
         agent_number = self.agent_number
         graph_to_raster = self.graph_to_raster
         raster_to_graph = self.raster_to_graph
         task_ending_times = [sys.maxsize] * agent_number
         done = [False] * agent_number
+        clear = list.clear
+        insert = list.insert
+        append = list.append
+        extend = list.extend
 
         for _ in count(0):
             # Assign tasks
@@ -203,19 +205,19 @@ class Environment:
                             movement = tuple(map(lambda i, j: i - j, start, end))
                             if self.raster_map[
                                 tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
-                                route_to_ps.insert(0,
+                                insert(route_to_ps, 0,
                                                    raster_to_graph[
                                                        tuple(map(lambda i, j: i + j, end, (0, movement[1])))])
                             else:
-                                route_to_ps.insert(0,
+                                insert(route_to_ps,0,
                                                    raster_to_graph[
                                                        tuple(map(lambda i, j: i + j, end, (movement[0], 0)))])
-                            route_to_ps.insert(0, route_to_pod[-1])
+                            insert(route_to_ps, 0, route_to_pod[-1])
                         route = [*route, *route_to_ps.copy()]
                         route_to_ps.reverse()
                         route = [*route, *route_to_ps]
-                        agent["route"].clear()
-                        agent["route"].extend([graph_to_raster[cell][0] for cell in route])
+                        clear(agent["route"])
+                        extend(agent["route"], [graph_to_raster[cell][0] for cell in route])
                         ver = True
 
             if ver:
@@ -243,7 +245,7 @@ class Environment:
                     del route[:delta]
                 else:
                     agent["position"] = agent["home"]
-                    agent["log"].append(agent["position"])
+                    append(agent["log"], agent["position"])
             self.time = new_time
 
     def save_data(self):
