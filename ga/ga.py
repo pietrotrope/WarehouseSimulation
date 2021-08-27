@@ -45,7 +45,7 @@ class GA:
             maxtest = max([len(scheduling[i]) for i in range(m)])
             Fx = maxtest / TT + n / TTC + BU
             self.cache[key] = (Fx, TT, TTC, BU)
-            return (Fx, TT, TTC, BU)
+            return Fx, TT, TTC, BU
         return self.cache[key]
 
     # chromosome_to_schedule maps a chromosome to a list of task ids (assigns task ids to the m robots)
@@ -80,26 +80,26 @@ class GA:
         n = self.n
         m = self.m
         popsize = self.popsize
-        lastcol = n + m - 1
-        population = population.sort_values(lastcol, ascending=False, ignore_index=True)
+        Fx_col = n + m - 1
+        population = population.sort_values(Fx_col, ascending=False, ignore_index=True)
         t = int(popsize * self.pselection - 1)
         t_plus_one = t + 1
-        elite = population.iloc[0:t_plus_one, 0:lastcol]
+        elite = population.iloc[0:t_plus_one, 0:Fx_col]
         remaining = population.iloc[t_plus_one:, :]
-        sumfitness = sum(remaining.loc[:, lastcol])
-        probabilities = [remaining.loc[i, lastcol] / sumfitness for i in range(t_plus_one, popsize)]
+        sumfitness = sum(remaining.loc[:, Fx_col])
+        probabilities = [remaining.loc[i, Fx_col] / sumfitness for i in range(t_plus_one, popsize)]
         cumsums = cumsum(probabilities)
         len_remaining = len(remaining)
         len_cumsums = len(cumsums)
         selectedremaining = [0] * len_remaining
-        remaining = remaining.iloc[:, 0:lastcol]
+        remaining = remaining.iloc[:, 0:Fx_col]
         for i in range(len_remaining):
             r = random.rand()
             for j in range(len_cumsums):
                 if r <= cumsums[j]:
                     selectedremaining[i] = j
                     break
-        notelite = remaining.iloc[selectedremaining, 0:lastcol]
+        notelite = remaining.iloc[selectedremaining, 0:Fx_col]
         return (elite.append(notelite)).to_numpy()
 
     # parent1, parent2: np array
@@ -167,18 +167,15 @@ class GA:
 
         fitness_and_metrics = asarray(list(map(self.__fitness, initialPopulation)))
 
-        lastcol = n + m - 1
-        lastcol_plus_one = lastcol + 1
-        lastcol_plus_two = lastcol + 2
-        lastcol_plus_three = lastcol + 3
+        Fx_col = n + m - 1
+        Fx_col_plus_one = Fx_col + 1
+        Fx_col_plus_two = Fx_col + 2
+        Fx_col_plus_three = Fx_col + 3
         df = DataFrame(initialPopulation)
-        df[lastcol] = fitness_and_metrics[:, 0]
-        df[lastcol_plus_one] = fitness_and_metrics[:, 1]
-        df[lastcol_plus_two] = fitness_and_metrics[:, 2]
-        df[lastcol_plus_three] = fitness_and_metrics[:, 3]
-
-        current_best_Fx = max(df.loc[:, lastcol])
-        last_improvement_gen = -1
+        df[Fx_col] = fitness_and_metrics[:, 0]
+        df[Fx_col_plus_one] = fitness_and_metrics[:, 1]
+        df[Fx_col_plus_two] = fitness_and_metrics[:, 2]
+        df[Fx_col_plus_three] = fitness_and_metrics[:, 3]
 
         # initial = df
 
@@ -203,24 +200,14 @@ class GA:
             fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
 
             df = DataFrame(offspring)
-            df[lastcol] = fitness_and_metrics[:, 0]
-            df[lastcol_plus_one] = fitness_and_metrics[:, 1]
-            df[lastcol_plus_two] = fitness_and_metrics[:, 2]
-            df[lastcol_plus_three] = fitness_and_metrics[:, 3]
-
-            new_best_Fx = max(df.loc[:, lastcol])
-            imp = (new_best_Fx - current_best_Fx) / current_best_Fx
-            # print("Fx % improvement: " + str(imp))
-            # self.improvements.append(imp)
-            if imp > 0.001:
-                last_improvement_gen = i
-                current_best_Fx = new_best_Fx
-            if i - last_improvement_gen > 200:
-                return df
+            df[Fx_col] = fitness_and_metrics[:, 0]
+            df[Fx_col_plus_one] = fitness_and_metrics[:, 1]
+            df[Fx_col_plus_two] = fitness_and_metrics[:, 2]
+            df[Fx_col_plus_three] = fitness_and_metrics[:, 3]
 
         if maxepoc >= 1000:
             self.pmutation = 0.5
-            for i in tqdm(range(1000, self.maxepoc), leave=False):
+            for i in tqdm(range(1000, 1500), leave=False):
                 # print("Generation: " + str(i))
 
                 selected = self.__selection(df)
@@ -235,12 +222,34 @@ class GA:
                 fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
 
                 df = DataFrame(offspring)
-                df[lastcol] = fitness_and_metrics[:, 0]
-                df[lastcol_plus_one] = fitness_and_metrics[:, 1]
-                df[lastcol_plus_two] = fitness_and_metrics[:, 2]
-                df[lastcol_plus_three] = fitness_and_metrics[:, 3]
+                df[Fx_col] = fitness_and_metrics[:, 0]
+                df[Fx_col_plus_one] = fitness_and_metrics[:, 1]
+                df[Fx_col_plus_two] = fitness_and_metrics[:, 2]
+                df[Fx_col_plus_three] = fitness_and_metrics[:, 3]
 
-                new_best_Fx = max(df.loc[:, lastcol])
+            current_best_Fx = max(df.loc[:, Fx_col])
+            last_improvement_gen = -1
+
+            for i in tqdm(range(1500, maxepoc), leave=False):
+                # print("Generation: " + str(i))
+
+                selected = self.__selection(df)
+                elite = selected[0:t_plus_one]
+                tmpcrossed = selected[t_plus_one:]
+                if random.rand() < pcrossover:
+                    tmpcrossed = self.crossover(tmpcrossed)
+                mutated = self.mutation(tmpcrossed)
+
+                offspring = concatenate((elite, mutated))
+
+                fitness_and_metrics = asarray(list(map(self.__fitness, offspring)))
+
+                df = DataFrame(offspring)
+                df[Fx_col] = fitness_and_metrics[:, 0]
+                df[Fx_col_plus_one] = fitness_and_metrics[:, 1]
+                df[Fx_col_plus_two] = fitness_and_metrics[:, 2]
+                df[Fx_col_plus_three] = fitness_and_metrics[:, 3]
+                new_best_Fx = max(df.loc[:, Fx_col])
                 imp = (new_best_Fx - current_best_Fx) / current_best_Fx
                 # print("Fx % improvement: " + str(imp))
                 # self.improvements.append(imp)
@@ -248,6 +257,8 @@ class GA:
                     last_improvement_gen = i
                     current_best_Fx = new_best_Fx
                 if i - last_improvement_gen > 200:
-                    return df
+                    best_individual = df.loc[df[Fx_col] == current_best_Fx].iloc[0]
+                    return best_individual
 
-        return df
+        best_individual = df.loc[df[Fx_col] == current_best_Fx].iloc[0]
+        return best_individual

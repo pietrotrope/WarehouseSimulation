@@ -1,5 +1,6 @@
+import random
 from sys import maxsize
-from random import choice
+from random import choice,seed
 from collections import deque
 import copy
 
@@ -9,21 +10,20 @@ class TaskHandler:
         self.env = env
         self.n = n
         scheduling = self.env.scheduling
-
         self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
-
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         self.pods = env.pods
         self.task_pool = {}
         self.initial_task_pool = {}
+        seed(env.seed)
         for i in range(n):
             self.task_pool[i + 1] = choice(self.pods)
 
     def new_task_pool(self, n):
         scheduling = self.env.scheduling
         pods = self.pods
-
+        seed(self.env.seed)
         self.n = n
         self.scheduling = "Random"
         self.assigned_tasks = [-1] * self.env.agent_number

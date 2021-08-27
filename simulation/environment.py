@@ -7,11 +7,14 @@ from numpy import asarray
 from simulation.agent.task_handler import TaskHandler
 from simulation.tile import Tile
 
+
 class Environment:
 
     def __init__(self, task_number=100, agent_number=8, scheduling="Random",
                  save=False, simulation_name="", routes=None, raster_map=None,
-                 graph=None, raster_to_graph=None, graph_to_raster=None, agents_positions=[], task_handler=None):
+                 graph=None, raster_to_graph={}, graph_to_raster={}, agents_positions=[], task_handler=None,
+                 seed=0):
+        self.seed = seed
         self.simulation_name = simulation_name
         self.scheduling = scheduling
         self.agent_number = agent_number
