@@ -78,22 +78,22 @@ class Environment:
         moves = self.moves
         agents_list = self.agents
         i = 0
+        i_plus_env_time = self.time
+        i_minus_one = i - 1
+        i_plus_time_plus_one = i_plus_env_time + 1
         clear = list.clear
         insert = list.insert
         append = list.append
         timestamp = self.timestamp
+        collision_detected = False
 
-        while i < (min(task_ending_times) - self.time):
+        while i_plus_env_time < min(task_ending_times):
             clear(moves)
             collision_detected = False
             for agent in agents_list:
                 if agent["task"]:
-                    collision = None
-
                     x, y = agent["route"][i]
-                    agent_id = agent["id"]
-                    i_plus_env_time, i_minus_one, x_y_times = i + self.time, i - 1, timestamp[x][y]
-                    i_plus_time_plus_one = i_plus_env_time + 1
+                    collision, agent_id, x_y_times = None, agent["id"], timestamp[x][y]
                     agents, new_agents, route_i_minus_one, ver2 = x_y_times[i_plus_env_time], x_y_times[
                         i_plus_time_plus_one], agent["route"][i_minus_one], agent["swap_phase"][0] <= 0
                     ver, ver3 = new_agents and new_agents[0] != agent_id, agents and agents[0] != agent_id and ver2
@@ -101,35 +101,29 @@ class Environment:
                     if ver3:
                         other_agent = agents_list[agents[0]]
                         agent2_route_greater_i = len(other_agent["route"]) > i
-
                         if agent2_route_greater_i:
-                            i_greater_0 = i > 0
                             other_agent_route_i = other_agent["route"][i]
-                            if i_greater_0:
+                            if i:
                                 if other_agent_route_i == route_i_minus_one:
-                                    collision = 0, i, agent_id, agents[0]
-                                elif other_agent_route_i == other_agent["route"][i_minus_one] or \
-                                        other_agent["swap_phase"][0]:
-                                    collision = 1, i, agent_id, -1
+                                    collision = 0, agent_id, agents[0]
                                 else:
-                                    if ver:
-                                        collision = 1, i, agent_id, -1
+                                    if ver or other_agent_route_i == other_agent["route"][i_minus_one] or \
+                                        other_agent["swap_phase"][0]:
+                                        collision = 1, agent_id, -1
                             else:
                                 if other_agent_route_i == agent["position"]:
-                                    collision = 0, i, agent_id, agents[0]
-                                elif other_agent_route_i == other_agent["position"] or other_agent["swap_phase"][0]:
-                                    collision = 1, i, agent_id, -1
+                                    collision = 0, agent_id, agents[0]
                                 else:
-                                    if ver:
-                                        collision = 1, i, agent_id, -1
+                                    if ver or other_agent_route_i == other_agent["position"] or other_agent["swap_phase"][0]:
+                                        collision = 1, agent_id, -1
                         else:
-                            collision = 1, i, agent_id, -1
+                            collision = 1, agent_id, -1
                     else:
                         if ver:
                             if ver2:
-                                collision = 1, i, agent_id, -1
+                                collision = 1, agent_id, -1
                             else:
-                                collision = 1, i, new_agents[0], -1
+                                collision = 1, new_agents[0], -1
 
                     if collision:
                         for ver, x1, y1, t, ag, otag in moves:
@@ -138,19 +132,19 @@ class Environment:
                                 ag["swap_phase"][0] += 1
                                 ag["swap_phase"][1] = otag
 
-                        collision_type, time, agent, other_agent = collision
+                        collision_type, agent, other_agent = collision
                         agent1 = agents_list[agent]
-                        time_minus_one = time - 1
-                        agent1["route"].insert(time, agent1["route"][time_minus_one]) if time else agent1[
+                        time_minus_one = i - 1
+                        agent1["route"].insert(i, agent1["route"][time_minus_one]) if i else agent1[
                             "route"].insert(0, agent1["position"])
-                        task_ending_times[collision[2]] = self.time + len(agents_list[collision[2]]["route"])
+                        task_ending_times[agent] = self.time + len(agents_list[agent]["route"])
                         if not collision_type:
                             agent2 = agents_list[other_agent]
                             agent1["swap_phase"] = [2, agent2["id"]]
-                            insert(agent2["route"], time, agent2["route"][time_minus_one]) if time else insert(
+                            insert(agent2["route"], i, agent2["route"][time_minus_one]) if i else insert(
                                 agent2["route"], 0, agent2["position"])
                             agent2["swap_phase"] = [2, agent1["id"]]
-                            task_ending_times[collision[3]] = self.time + len(agents_list[collision[3]]["route"])                          
+                            task_ending_times[other_agent] = self.time + len(agents_list[other_agent]["route"])                          
 
                         collision_detected = True
                         break
@@ -164,7 +158,10 @@ class Environment:
                         else:
                             append(moves, (False, x, y, i_plus_time_plus_one, -1, -1))
             if not collision_detected:
+                i_minus_one = i
                 i += 1
+                i_plus_env_time = i + self.time
+                i_plus_time_plus_one = i_plus_env_time + 1
 
     def run(self):
         task_ending_times = self.task_ending_times
