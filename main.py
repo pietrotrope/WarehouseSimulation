@@ -10,7 +10,7 @@ import json
 def main():
     disable()    
     seed(666)
-    task_number = 50
+    task_number = 400
 
     routes = {}
     with open('astar/astarRoutes.json', 'r') as f:
