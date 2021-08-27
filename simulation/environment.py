@@ -172,13 +172,12 @@ class Environment:
                         del active_agents[agent["id"]]
                     else:
                         agent["task"] = task
-                        id_robot = agent["position"]
-                        id_pod = task
-                        route_to_pod = self.routes[id_robot][id_pod]
+                        agent_position = agent["position"]
+                        route_to_pod = self.routes[agent_position][task]
                         if not route_to_pod:
-                            route_to_pod = [agent["position"]]
+                            route_to_pod = [agent_position]
                         route = route_to_pod
-                        route_to_ps = self.routes[id_pod].copy()
+                        route_to_ps = self.routes[task].copy()
                         if route_to_pod[-1] != route_to_ps[0]:
                             start = route_to_ps[0]
                             end = route_to_pod[-1]
@@ -245,13 +244,12 @@ class Environment:
             return True
         else:
             agent["task"] = task
-            id_robot = agent["position"]
-            id_pod = task
-            route_to_pod = self.routes[id_robot][id_pod]
+            agent_position = agent["position"]
+            route_to_pod = self.routes[agent_position][task]
             if not route_to_pod:
-                route_to_pod = [agent["position"]]
+                route_to_pod = [agent_position]
             route = route_to_pod
-            route_to_ps = self.routes[id_pod].copy()
+            route_to_ps = self.routes[task].copy()
             if route_to_pod[-1] != route_to_ps[0]:
                 start = route_to_ps[0]
                 end = route_to_pod[-1]
