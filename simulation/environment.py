@@ -162,8 +162,9 @@ class Environment:
         append = list.append
         extend = list.extend
         self.active_agents = {}
+        active_agents = self.active_agents
         for i in agents:
-            self.active_agents[i["id"]] = i
+            active_agents[i["id"]] = i
 
         for _ in count(0):
             # Assign tasks
@@ -177,7 +178,8 @@ class Environment:
                         agent["position"] = agent["home"]
                         task_ending_times[agent["id"]] = sys.maxsize
                         agent["task"] = None
-                        del self.active_agents[agent["id"]]
+                        append(agent["log"], agent["position"])
+                        del active_agents[agent["id"]]
                     else:
                         agent["task"] = task
                         id_robot = str(raster_to_graph[agent["position"]])
@@ -209,9 +211,9 @@ class Environment:
                         ver = True
 
             if ver:
-                for update_agent in agents:
+                for update_agent_id, update_agent in active_agents.items():
                     if not done[update_agent["id"]]:
-                        task_ending_times[update_agent["id"]] = curtime + len(update_agent["route"])
+                        task_ending_times[update_agent_id] = curtime + len(update_agent["route"])
             else:
                 if done.count(True) == len(done):
                     if self.save:
@@ -225,15 +227,12 @@ class Environment:
 
             new_time = min(task_ending_times)
             delta = new_time - curtime
-            for agent in agents:
+            for _ , agent in active_agents.items():
                 route = agent["route"]
                 if len(route) >= delta:
                     agent["log"] = [*(agent["log"]), *(agent["route"][0:delta])]
                     agent["position"] = route[delta - 1]
                     del route[:delta]
-                else:
-                    agent["position"] = agent["home"]
-                    append(agent["log"], agent["position"])
             self.time = new_time
 
     def save_data(self):
