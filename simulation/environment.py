@@ -40,22 +40,16 @@ class Environment:
             self.task_handler = task_hanlder
         
         for i in range(self.agent_number):
+            start_position = agents_positions[i]
             self.agents.append({
                 "id" : i,
-                "position" : agents_positions[i],
-                "home" : agents_positions[i],
+                "position" : start_position,
+                "home" : start_position,
                 "route" : [],
                 "task" : None,
-                "log" : [agents_positions[i]],
+                "log" : [start_position],
                 "swap_phase" : [0, i]
             })
-
-
-
-
-
-
-
 
         if routes is None:
             with open('astar/astarRoutes.json', 'r') as f:
@@ -76,10 +70,8 @@ class Environment:
         self.save = save
         for agent in self.agents:
             agent["position"] = agent["home"]
-            agent["time"] = 0
             agent["log"].clear()
             agent["log"].append(agent["position"])
-        
 
         for x in range(self.map_shape[0]):
             for y in range(self.map_shape[1]):
@@ -192,12 +184,15 @@ class Environment:
             curtime = self.time
             ver = False
             for agent in agents:
-                if not agent["route"]:
+                if not agent["route"] and not done[agent["id"]]:
                     task = self.task_handler.get_task(agent["id"])
                     if task is None:
                         done[agent["id"]] = True
+                        agent["position"] = agent["home"]
+                        task_ending_times[agent["id"]] = sys.maxsize
+                        agent["task"] = None
                     else:
-                        agent["task"]= task
+                        agent["task"] = task
                         id_robot = str(raster_to_graph[agent["position"]])
                         id_pod = str(raster_to_graph[task])
                         route_to_pod = self.routes[id_robot][id_pod]
@@ -219,13 +214,8 @@ class Environment:
                         route = [*route, *route_to_ps.copy()]
                         route_to_ps.reverse()
                         route = [*route, *route_to_ps]
-                        agent["route"] = [graph_to_raster[cell][0] for cell in route]
-
-                    if done[agent["id"]]:
-                        agent["position"] = agent["home"]
-                        task_ending_times[agent["id"]] = sys.maxsize
-                        agent["task"] = None
-                    else:
+                        agent["route"].clear()
+                        agent["route"].extend([graph_to_raster[cell][0] for cell in route])
                         ver = True
 
             if ver:
