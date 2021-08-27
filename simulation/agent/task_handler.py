@@ -3,6 +3,7 @@ from random import choice
 from collections import deque
 import copy
 
+
 class TaskHandler:
     def __init__(self, env, n):
         self.env = env
@@ -29,7 +30,7 @@ class TaskHandler:
         self.picking_times = {}
         if self.env.scheduling is not None:
             self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
-        self.task_pool = {i+1: choice(pods) for i in range(n)}
+        self.task_pool = {i + 1: choice(pods) for i in range(n)}
         self.initial_task_pool = copy.copy(self.task_pool)
 
     def same_task_pool(self, n):
@@ -40,7 +41,7 @@ class TaskHandler:
         self.picking_times = {}
         if self.env.scheduling is not None:
             self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
-            
+
     def restore_task_pool(self):
         self.task_pool = copy.deepcopy(self.initial_task_pool)
 
@@ -48,8 +49,7 @@ class TaskHandler:
         scheduling = self.scheduling
         if len(scheduling) == 8:
             if scheduling[robot_id]:
-                a = self.task_pool[scheduling[robot_id].popleft()]
-                return a
+                return self.task_pool[scheduling[robot_id].popleft()]
             else:
                 return None
         elif self.scheduling == "Greedy0":
@@ -79,17 +79,17 @@ class TaskHandler:
                 if task_len < new_task[1]:
                     new_task[0] = possible_task
                     new_task[1] = task_len
-            
+
             selected_task = self.task_pool[new_task[0]]
             del self.task_pool[new_task[0]]
             return selected_task
         else:
             return None
-    
+
     def _greedy_approach_1(self, robot_id):
         if self.assigned_tasks[robot_id] != -1:
             del self.picking_times[self.assigned_tasks[robot_id]]
-            del self.task_pool[self.assigned_tasks[robot_id]]   
+            del self.task_pool[self.assigned_tasks[robot_id]]
             self.assigned_tasks[robot_id] = -1
         if self.task_pool:
             indexes = list(self.task_pool.keys())
@@ -103,7 +103,9 @@ class TaskHandler:
                     self.env.raster_to_graph[self.task_pool[possible_task]])
                 task_len = len(self.env.routes[id_robot][id_pod])
 
-                if possible_task in self.picking_times and (self.picking_times[possible_task][1] == robot_id or self.picking_times[possible_task][0] - self.env.time <= task_len or self.picking_times[possible_task][0] - self.env.time <= 0):
+                if possible_task in self.picking_times and (
+                        self.picking_times[possible_task][1] == robot_id or self.picking_times[possible_task][
+                    0] - self.env.time <= task_len or self.picking_times[possible_task][0] - self.env.time <= 0):
                     continue
 
                 if task_len < new_task[1]:
@@ -119,7 +121,7 @@ class TaskHandler:
 
                 if new_task[0] in self.picking_times:
                     self.picking_times[new_task[0]][0] = new_task[1] + self.env.time
-                    self.picking_times[new_task[0]][1] = robot_id                        
+                    self.picking_times[new_task[0]][1] = robot_id
                 else:
                     self.picking_times[new_task[0]] = [new_task[1] + self.env.time, robot_id]
                 self.assigned_tasks[robot_id] = new_task[0]
@@ -128,8 +130,7 @@ class TaskHandler:
                     self.env.agents[other_robot_id]["task"] = None
                     self.assigned_tasks[other_robot_id] = -1
                     self.env.get_task(self.env.agents[other_robot_id])
-                    
+
                 selected_task = self.task_pool[new_task[0]]
                 return selected_task
         return None
-
