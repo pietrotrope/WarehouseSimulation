@@ -3,12 +3,9 @@ from collections import defaultdict
 import csv
 import json
 from itertools import count
-
 import numpy as np
-
 from simulation.agent.task_handler import TaskHandler
 from simulation.tile import Tile
-
 
 class Environment:
 
@@ -75,25 +72,18 @@ class Environment:
             return self.run()
 
     def make_step(self, task_ending_times):
-        moves = self.moves
-        agents_list = self.agents
-        i = 0
-        i_plus_env_time = self.time
-        i_minus_one = i - 1
-        i_plus_time_plus_one = i_plus_env_time + 1
-        clear = list.clear
-        insert = list.insert
-        append = list.append
-        timestamp = self.timestamp
-        collision_detected = False
+        moves, agents_list  = self.moves, self.agents
+        i, i_plus_env_time = 0, self.time
+        i_plus_time_plus_one, i_minus_one = i_plus_env_time + 1, i - 1
+        clear, insert, append, timestamp = list.clear, list.insert, list.append, self.timestamp
 
         while i_plus_env_time < min(task_ending_times):
             clear(moves)
-            collision_detected = False
+            collision = None
             for agent in agents_list:
                 if agent["task"]:
                     x, y = agent["route"][i]
-                    collision, agent_id, x_y_times = None, agent["id"], timestamp[x][y]
+                    agent_id, x_y_times = agent["id"], timestamp[x][y]
                     agents, new_agents, route_i_minus_one, ver2 = x_y_times[i_plus_env_time], x_y_times[
                         i_plus_time_plus_one], agent["route"][i_minus_one], agent["swap_phase"][0] <= 0
                     ver, ver3 = new_agents and new_agents[0] != agent_id, agents and agents[0] != agent_id and ver2
@@ -134,19 +124,17 @@ class Environment:
 
                         collision_type, agent, other_agent = collision
                         agent1 = agents_list[agent]
-                        time_minus_one = i - 1
-                        agent1["route"].insert(i, agent1["route"][time_minus_one]) if i else agent1[
+                        agent1["route"].insert(i, agent1["route"][i_minus_one]) if i else agent1[
                             "route"].insert(0, agent1["position"])
                         task_ending_times[agent] = self.time + len(agents_list[agent]["route"])
                         if not collision_type:
                             agent2 = agents_list[other_agent]
                             agent1["swap_phase"] = [2, agent2["id"]]
-                            insert(agent2["route"], i, agent2["route"][time_minus_one]) if i else insert(
+                            insert(agent2["route"], i, agent2["route"][i_minus_one]) if i else insert(
                                 agent2["route"], 0, agent2["position"])
                             agent2["swap_phase"] = [2, agent1["id"]]
                             task_ending_times[other_agent] = self.time + len(agents_list[other_agent]["route"])                          
 
-                        collision_detected = True
                         break
                     else:
                         append(x_y_times[i_plus_time_plus_one], agent_id)
@@ -157,7 +145,7 @@ class Environment:
                                 agent["swap_phase"][1] = agent_id
                         else:
                             append(moves, (False, x, y, i_plus_time_plus_one, -1, -1))
-            if not collision_detected:
+            if not collision:
                 i_minus_one = i
                 i += 1
                 i_plus_env_time = i + self.time
