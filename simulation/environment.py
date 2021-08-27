@@ -1,12 +1,9 @@
 import sys
 from collections import defaultdict
-import csv
-import json
 from itertools import count
 from numpy import asarray
 from simulation.agent.task_handler import TaskHandler
 from simulation.tile import Tile
-
 
 class Environment:
 
@@ -45,12 +42,7 @@ class Environment:
                      cell == Tile.POD.value]
 
         self.task_handler = TaskHandler(self, task_number) if task_handler is None else task_handler
-
-        if routes is None:
-            with open('astar/astarRoutes.json', 'r') as f:
-                self.routes = json.load(f)
-        else:
-            self.routes = routes
+        self.routes = routes
 
     def new_simulation(self, task_number=100, run=True, save=False, scheduling="Random", new_task_pool=False,
                        simulation_name=None):
@@ -155,14 +147,9 @@ class Environment:
     def run(self):
         agents = self.agents
         agent_number = self.agent_number
-        graph_to_raster = self.graph_to_raster
-        raster_to_graph = self.raster_to_graph
         task_ending_times = [sys.maxsize] * agent_number
         done = [False] * agent_number
-        clear = list.clear
-        insert = list.insert
-        append = list.append
-        extend = list.extend
+        clear, insert, extend = list.clear, list.insert, list.extend
         self.active_agents = {}
         active_agents = self.active_agents
         iterator = active_agents.items()
@@ -185,32 +172,30 @@ class Environment:
                         del active_agents[agent["id"]]
                     else:
                         agent["task"] = task
-                        id_robot = str(raster_to_graph[agent["position"]])
-                        id_pod = str(raster_to_graph[task])
+                        id_robot = agent["position"]
+                        id_pod = task
                         route_to_pod = self.routes[id_robot][id_pod]
                         if not route_to_pod:
-                            route_to_pod = [raster_to_graph[agent["position"]]]
+                            route_to_pod = [agent["position"]]
                         route = route_to_pod
                         route_to_ps = self.routes[id_pod].copy()
                         if route_to_pod[-1] != route_to_ps[0]:
-                            start = graph_to_raster[route_to_ps[0]][0]
-                            end = graph_to_raster[route_to_pod[-1]][0]
+                            start = route_to_ps[0]
+                            end = route_to_pod[-1]
                             movement = tuple(map(lambda i, j: i - j, start, end))
                             if self.raster_map[
                                 tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
                                 insert(route_to_ps, 0,
-                                                   raster_to_graph[
-                                                       tuple(map(lambda i, j: i + j, end, (0, movement[1])))])
+                                                       tuple(map(lambda i, j: i + j, end, (0, movement[1]))))
                             else:
                                 insert(route_to_ps,0,
-                                                   raster_to_graph[
-                                                       tuple(map(lambda i, j: i + j, end, (movement[0], 0)))])
+                                                       tuple(map(lambda i, j: i + j, end, (movement[0], 0))))
                             insert(route_to_ps, 0, route_to_pod[-1])
                         route = [*route, *route_to_ps.copy()]
                         route_to_ps.reverse()
                         route = [*route, *route_to_ps]
                         clear(agent["route"])
-                        extend(agent["route"], [graph_to_raster[cell][0] for cell in route])
+                        extend(agent["route"], route)
                         ver = True
 
             if ver:
@@ -252,34 +237,36 @@ class Environment:
             f.write(str(BU))
 
     def get_task(self, agent):
+        clear = list.clear
+        insert = list.insert
+        extend = list.extend
         task = self.task_handler.get_task(agent["id"])
         if task is None:
             return True
         else:
             agent["task"] = task
-            graph_to_raster = self.graph_to_raster
-            raster_to_graph = self.raster_to_graph
-            id_robot = str(raster_to_graph[agent["position"]])
-            id_pod = str(raster_to_graph[task])
+            id_robot = agent["position"]
+            id_pod = task
             route_to_pod = self.routes[id_robot][id_pod]
             if not route_to_pod:
-                route_to_pod = [raster_to_graph[agent["position"]]]
+                route_to_pod = [agent["position"]]
             route = route_to_pod
-
             route_to_ps = self.routes[id_pod].copy()
             if route_to_pod[-1] != route_to_ps[0]:
-                start = graph_to_raster[route_to_ps[0]][0]
-                end = graph_to_raster[route_to_pod[-1]][0]
+                start = route_to_ps[0]
+                end = route_to_pod[-1]
                 movement = tuple(map(lambda i, j: i - j, start, end))
-                if self.raster_map[tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
-                    route_to_ps.insert(0,
-                                       raster_to_graph[tuple(map(lambda i, j: i + j, end, (0, movement[1])))])
+                if self.raster_map[
+                    tuple(map(lambda i, j: i + j, end, (0, movement[1])))] == Tile.WALKABLE.value:
+                    insert(route_to_ps, 0,
+                                            tuple(map(lambda i, j: i + j, end, (0, movement[1]))))
                 else:
-                    route_to_ps.insert(0,
-                                       raster_to_graph[tuple(map(lambda i, j: i + j, end, (movement[0], 0)))])
-                route_to_ps.insert(0, route_to_pod[-1])
+                    insert(route_to_ps,0,
+                                            tuple(map(lambda i, j: i + j, end, (movement[0], 0))))
+                insert(route_to_ps, 0, route_to_pod[-1])
             route = [*route, *route_to_ps.copy()]
             route_to_ps.reverse()
             route = [*route, *route_to_ps]
-            agent["route"] = [graph_to_raster[cell][0] for cell in route]
+            clear(agent["route"])
+            extend(agent["route"], route)
             return False

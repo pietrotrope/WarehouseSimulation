@@ -1,4 +1,3 @@
-import random
 from sys import maxsize
 from random import choice,seed
 from collections import deque
@@ -69,12 +68,13 @@ class TaskHandler:
         if self.task_pool:
             indexes = list(self.task_pool.keys())
             new_task = [indexes[0], -1]
-            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id]["position"]])
-            id_pod = str(self.env.raster_to_graph[self.task_pool[indexes[0]]])
+
+            id_robot = self.env.agents[robot_id]["position"]
+            id_pod = self.task_pool[indexes[0]]
             new_task[1] = len(self.env.routes[id_robot][id_pod])
 
             for possible_task in indexes:
-                id_pod = str(self.env.raster_to_graph[self.task_pool[possible_task]])
+                id_pod = self.task_pool[possible_task]
                 task_len = len(self.env.routes[id_robot][id_pod])
                 if task_len < new_task[1]:
                     new_task[0] = possible_task
@@ -94,13 +94,12 @@ class TaskHandler:
         if self.task_pool:
             indexes = list(self.task_pool.keys())
             new_task = [-1, maxsize]
-            id_robot = str(self.env.raster_to_graph[self.env.agents[robot_id]["position"]])
+            id_robot = self.env.agents[robot_id]["position"]
 
             other_robot_id = -1
             ver = False
             for possible_task in indexes:
-                id_pod = str(
-                    self.env.raster_to_graph[self.task_pool[possible_task]])
+                id_pod = self.task_pool[possible_task]
                 task_len = len(self.env.routes[id_robot][id_pod])
 
                 if possible_task in self.picking_times and (
