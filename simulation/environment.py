@@ -34,7 +34,7 @@ class Environment:
             "home": agents_positions[i],
             "route": [],
             "task": None,
-            "log": [agents_positions[i]],
+            "log": 1,
             "swap_phase": [0, i]
         } for i in range(self.agent_number)]
         self.moves = []
@@ -65,8 +65,7 @@ class Environment:
         self.save = save
         for agent in self.agents:
             agent["position"] = agent["home"]
-            agent["log"].clear()
-            agent["log"].append(agent["position"])
+            agent["log"] = 1
 
         clear = dict.clear
         [clear(tsp) for ls in self.timestamp for tsp in ls]
@@ -182,7 +181,7 @@ class Environment:
                         agent["position"] = agent["home"]
                         task_ending_times[agent["id"]] = sys.maxsize
                         agent["task"] = None
-                        append(agent["log"], agent["position"])
+                        agent["log"]+=1
                         del active_agents[agent["id"]]
                     else:
                         agent["task"] = task
@@ -222,7 +221,7 @@ class Environment:
                 if done.count(True) == len(done):
                     if self.save:
                         self.save_data()
-                    res = [len(agent["log"]) for agent in agents]
+                    res = [agent["log"] for agent in agents]
                     TTC = sum(res)
                     BU, TT = min(res) / max(res), max(res)
                     return TT, TTC, BU
@@ -234,33 +233,23 @@ class Environment:
             for _ , agent in iterator:
                 route = agent["route"]
                 if len(route) >= delta:
-                    agent["log"] = [*(agent["log"]), *(agent["route"][0:delta])]
+                    agent["log"] += delta
                     agent["position"] = route[delta - 1]
                     del route[:delta]
             self.time = new_time
 
     def save_data(self):
-        res = []
-        for agent in self.agents:
-            res.append(agent["log"])
-        with open(self.simulation_name + "_out.csv", "w") as f:
-            wr = csv.writer(f)
-            wr.writerows(res)
-
-        ttc = 0
-        res_lengths = []
-        for r in res:
-            res_lengths.append(len(r))
-            ttc += len(r)
-        bu = min(res_lengths) / max(res_lengths)
+        res = [agent["log"] for agent in self.agents]
+        TTC = sum(res)
+        BU, TT = min(res) / max(res), max(res)
 
         with open(self.simulation_name + '_metrics.txt', 'w') as f:
             f.write('Total Time:\n')
-            f.write(str(max(res_lengths)))
+            f.write(str(TT))
             f.write("\nTotal Travel Cost:\n")
-            f.write(str(ttc))
+            f.write(str(TTC))
             f.write("\nBalancing Utilization:\n")
-            f.write(str(bu))
+            f.write(str(BU))
 
     def get_task(self, agent):
         task = self.task_handler.get_task(agent["id"])
