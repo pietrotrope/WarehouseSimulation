@@ -58,6 +58,9 @@ class Environment:
         for agent in self.agents:
             agent["position"] = agent["home"]
             agent["log"] = 1
+            agent["route"].clear()
+            agent["task"]= None,
+            agent["swap_phase"]= [0, agent["id"]]
 
         clear = dict.clear
         [clear(tsp) for ls in self.timestamp for tsp in ls]
@@ -146,7 +149,7 @@ class Environment:
                 i_plus_time_plus_one = i_plus_env_time + 1
             else:
                 counter+=1
-                if counter >= 20:
+                if counter >= 5:
                     return True
 
     def run(self):
@@ -201,6 +204,7 @@ class Environment:
                         clear(agent["route"])
                         extend(agent["route"], route)
                         ver = True
+            
 
             if ver:
                 for update_agent_id, update_agent in iterator:
