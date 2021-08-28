@@ -70,9 +70,9 @@ class Environment:
         i, i_plus_env_time = 0, self.time
         i_plus_time_plus_one, i_minus_one = i_plus_env_time + 1, i - 1
         clear, insert, append, timestamp = list.clear, list.insert, list.append, self.timestamp
-
+        counter = 0
         while i_plus_env_time < min(task_ending_times):
-            clear(moves)
+            clear(moves)         
             collision = None
             for agent_id, agent in iterator:
                 x, y = agent["route"][i]
@@ -139,10 +139,15 @@ class Environment:
                     else:
                         append(moves, (False, x, y, -1, -1))
             if not collision:
+                counter = 0
                 i_minus_one = i
                 i += 1
                 i_plus_env_time = i + self.time
                 i_plus_time_plus_one = i_plus_env_time + 1
+            else:
+                counter+=1
+                if counter >= 20:
+                    return True
 
     def run(self):
         agents = self.agents
@@ -208,7 +213,9 @@ class Environment:
                     BU, TT = min(res) / max(res), max(res)
                     return TT, TTC, BU
 
-            self.make_step(task_ending_times, iterator)
+            res = self.make_step(task_ending_times, iterator)
+            if res:
+                return sys.maxsize, sys.maxsize, 0
 
             new_time = min(task_ending_times)
             delta = new_time - curtime

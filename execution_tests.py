@@ -35,29 +35,25 @@ def main():
     
 
     e = Environment(task_number=task_number, scheduling="Greedy0",
-                    simulation_name="test", raster_map = raster_map, graph=graph, raster_to_graph=raster_to_graph,
+                    simulation_name="test", raster_map=raster_map, graph=graph, raster_to_graph=raster_to_graph,
                     agents_positions=agents_positions, graph_to_raster=graph_to_raster, routes=routes)
     
                     
     e.task_handler.new_task_pool(task_number)
     t = time()
-    ga = GA(0, e.new_simulation, popsize=100, maxepoc=10, n=task_number, m=8)
-    best_individual = ga.run()
+    ga = GA(5, e.new_simulation, popsize=100, maxepoc=100000, n=task_number, m=8)
+    ga.run()
     elapsed = time() - t
     enable()
     #print(last_population)
     print("Elapsed " + str(elapsed))
 
-    Fx_col = task_number + 7
-    scheduling = best_individual[:Fx_col]
-    chromosome = list(map(int, scheduling))
-    schedule = ga.chromosome_to_schedule(chromosome=chromosome)
-    e.new_simulation(task_number=task_number, save=True, scheduling=schedule, simulation_name="GA")
+
     e.new_simulation(task_number=task_number, save=True, scheduling="Greedy0", simulation_name="Greedy0")
     e.task_handler.restore_task_pool()
     e.new_simulation(task_number=task_number, save=True, scheduling="Greedy1", simulation_name="Greedy1")
     e.task_handler.restore_task_pool()
-    e.new_simulation(task_number=task_number, save=True, scheduling=None, simulation_name="random")
+    e.new_simulation(task_number=task_number, save=True, scheduling="Random", simulation_name="random")
     e.task_handler.restore_task_pool()
 
     return elapsed
