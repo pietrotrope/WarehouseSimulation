@@ -231,7 +231,7 @@ class GA:
                 df[Fx_col_plus_three] = fitness_and_metrics[:, 3]
 
             current_best_Fx = max(df.loc[:, Fx_col])
-            last_improvement_gen = -1
+            last_improvement_gen = 1500
 
             for i in tqdm(range(1500, maxepoc), leave=False):
                 # print("Generation: " + str(i))
@@ -256,12 +256,12 @@ class GA:
                 imp = (new_best_Fx - current_best_Fx) / current_best_Fx
                 # print("Fx % improvement: " + str(imp))
                 # self.improvements.append(imp)
-                if imp > 0.001:
+                if imp > 0.0001:
                     last_improvement_gen = i
                     current_best_Fx = new_best_Fx
-                if i - last_improvement_gen > 200:
+                if i - last_improvement_gen >= 200:
                     best_individual = df.loc[df[Fx_col] == current_best_Fx].iloc[0]
-                    return best_individual
+                    return (best_individual[Fx_col_plus_one],best_individual[Fx_col_plus_two],best_individual[Fx_col_plus_three], i)
 
         best_individual = df.loc[df[Fx_col] == current_best_Fx].iloc[0]
-        return best_individual
+        return (best_individual[Fx_col_plus_one],best_individual[Fx_col_plus_two],best_individual[Fx_col_plus_three], maxepoc)

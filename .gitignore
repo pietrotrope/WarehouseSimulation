@@ -378,3 +378,10 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm+all,linux,windows,macos,python,jetbrains+all,visualstudiocode
+ga_50.csv
+ga_100.csv
+ga_150.csv
+ga_200.csv
+greedy0_50.csv
+greedy1_50.csv
+random_50.csv

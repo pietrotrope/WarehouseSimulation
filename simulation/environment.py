@@ -203,8 +203,6 @@ class Environment:
                         task_ending_times[update_agent_id] = curtime + len(update_agent["route"])
             else:
                 if done.count(True) == len(done):
-                    if self.save:
-                        self.save_data()
                     res = [agent["log"] for agent in agents]
                     TTC = sum(res)
                     BU, TT = min(res) / max(res), max(res)
