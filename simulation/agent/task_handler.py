@@ -63,6 +63,15 @@ class TaskHandler:
                 return task
             else:
                 return None
+    
+    def TA_random_scheduling_initialization(self):
+        scheduling = [[] for _ in range(self.env.agent_number)]
+        keys = list(self.task_pool.keys())
+        while keys:
+             choice(scheduling).append(keys[0])
+             del keys[0]
+        self.scheduling = scheduling
+        self.env.scheduling = scheduling
 
     def _greedy_approach_0(self, robot_id):
         if self.task_pool:
