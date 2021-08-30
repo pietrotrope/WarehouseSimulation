@@ -13,11 +13,12 @@ class TaskHandler:
         self.assigned_tasks = [-1] * self.env.agent_number
         self.picking_times = {}
         self.pods = env.pods
+        self.picking_stations = env.picking_stations
         self.task_pool = {}
         self.initial_task_pool = {}
         seed(env.seed)
         for i in range(n):
-            self.task_pool[i + 1] = choice(self.pods)
+            self.task_pool[i + 1] = (choice(self.pods), choice(self.picking_stations)[1][0])
 
     def new_task_pool(self, n):
         scheduling = self.env.scheduling
@@ -29,7 +30,7 @@ class TaskHandler:
         self.picking_times = {}
         if self.env.scheduling is not None:
             self.scheduling = scheduling if len(scheduling) != 8 else [deque(s) for s in scheduling]
-        self.task_pool = {i + 1: choice(pods) for i in range(n)}
+        self.task_pool = {i + 1: (choice(pods), choice(self.picking_stations)[1][0]) for i in range(n)}
         self.initial_task_pool = copy.copy(self.task_pool)
 
     def same_task_pool(self, n):
@@ -79,11 +80,11 @@ class TaskHandler:
             new_task = [indexes[0], -1]
 
             id_robot = self.env.agents[robot_id]["position"]
-            id_pod = self.task_pool[indexes[0]]
+            id_pod = self.task_pool[indexes[0]][0]
             new_task[1] = len(self.env.routes[id_robot][id_pod])
 
             for possible_task in indexes:
-                id_pod = self.task_pool[possible_task]
+                id_pod = self.task_pool[possible_task][0]
                 task_len = len(self.env.routes[id_robot][id_pod])
                 if task_len < new_task[1]:
                     new_task[0] = possible_task
@@ -108,7 +109,7 @@ class TaskHandler:
             other_robot_id = -1
             ver = False
             for possible_task in indexes:
-                id_pod = self.task_pool[possible_task]
+                id_pod = self.task_pool[possible_task][0]
                 task_len = len(self.env.routes[id_robot][id_pod])
 
                 if possible_task in self.picking_times and (

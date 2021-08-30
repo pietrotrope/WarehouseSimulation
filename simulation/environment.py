@@ -10,7 +10,7 @@ class Environment:
     def __init__(self, task_number=100, agent_number=8, scheduling="Random",
                  save=False, simulation_name="", routes=None, raster_map=None,
                  graph=None, raster_to_graph={}, graph_to_raster={}, agents_positions=[], task_handler=None,
-                 seed=0):
+                 seed=0, picking_stations = {}):
         self.seed = seed
         self.simulation_name = simulation_name
         self.scheduling = scheduling
@@ -40,6 +40,7 @@ class Environment:
         self.done = [False] * agent_number
         self.pods = [(i, j) for i, line in enumerate(self.raster_map) for j, cell in enumerate(line) if
                      cell == Tile.POD.value]
+        self.picking_stations = picking_stations
 
         self.task_handler = TaskHandler(self, task_number) if task_handler is None else task_handler
         self.routes = routes
@@ -181,11 +182,12 @@ class Environment:
                     else:
                         agent["task"] = task
                         agent_position = agent["position"]
-                        route_to_pod = self.routes[agent_position][task]
+                        route_to_pod = self.routes[agent_position][task[0]]
                         if not route_to_pod:
                             route_to_pod = [agent_position]
                         route = route_to_pod
-                        route_to_ps = self.routes[task].copy()
+                        ps = None
+                        route_to_ps = self.routes[task[0]][task[1]].copy()
                         if route_to_pod[-1] != route_to_ps[0]:
                             start = route_to_ps[0]
                             end = route_to_pod[-1]
@@ -254,11 +256,11 @@ class Environment:
         else:
             agent["task"] = task
             agent_position = agent["position"]
-            route_to_pod = self.routes[agent_position][task]
+            route_to_pod = self.routes[agent_position][task[0]]
             if not route_to_pod:
                 route_to_pod = [agent_position]
             route = route_to_pod
-            route_to_ps = self.routes[task].copy()
+            route_to_ps = self.routes[task[0]][task[1]].copy()
             if route_to_pod[-1] != route_to_ps[0]:
                 start = route_to_ps[0]
                 end = route_to_pod[-1]

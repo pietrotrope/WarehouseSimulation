@@ -72,12 +72,15 @@ def gen_graph(raster_map):
             if i:
                 graph.add_edge(node, raster_to_graph[(i - 1, j)])
 
+    ps = []
+
     for picking_station in picking_stations:
         node = graph.get_node(
             raster_to_graph[picking_station[0]])
         node.coord = picking_station
+        ps.append([node, picking_station])
     
-    return graph, raster_to_graph, agents_positions
+    return graph, raster_to_graph, agents_positions, ps
 
 
     
