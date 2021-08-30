@@ -16,7 +16,7 @@ def main(task_number):
     with open('astar/astarRoutes.json', 'r') as f:
         routes = json.load(f) 
     raster_map = get_raster_map('rendering/map.csv')
-    graph, raster_to_graph, agents_positions = gen_graph(raster_map)
+    graph, raster_to_graph, agents_positions, picking_stations  = gen_graph(raster_map)
     graph_to_raster = gen_graph_to_raster(graph)
     new_dic = {}
     for key, value in routes.items():
@@ -37,7 +37,7 @@ def main(task_number):
 
     e = Environment(task_number=task_number, scheduling="Greedy0",
                     simulation_name="test", raster_map=raster_map, graph=graph, raster_to_graph=raster_to_graph,
-                    agents_positions=agents_positions, graph_to_raster=graph_to_raster, routes=routes)
+                    agents_positions=agents_positions, graph_to_raster=graph_to_raster, routes=routes, picking_stations=picking_stations)
 
     name_ga = "".join(["ga_", str(task_number), ".csv"])
     t = time()
